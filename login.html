@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Dashboard Gudang - Staff & KTU</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #333; margin-bottom: 5px; text-align: center; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 20px; }
+        .form-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .btn-primary { background-color: #007bff; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .back-link { display: block; text-align: center; margin-top: 15px; font-size: 13px; color: #666; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        
+        #dashboard-container { display: none; width: 100%; max-width: 900px; }
+        .dash-header { background: #343a40; color: white; padding: 15px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .dash-body { background: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-logout { background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f8f9fa; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-warning { background: #ffc107; color: #333; }
+        .badge-success { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="card" id="login-card">
+        <h2>🔑 Login Staff & KTU</h2>
+        <p class="subtitle">Khusus Staff Departemen, Management, & KTU</p>
+        
+        <form id="formLogin">
+            <div class="form-group">
+                <label>Email Akses</label>
+                <input type="email" id="email" required placeholder="nama@perusahaan.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-primary">Masuk ke Dashboard</button>
+        </form>
+
+        <a href="index.html" class="back-link">← Kembali ke Portal Pengguna Umum</a>
+    </div>
+
+    <div id="dashboard-container">
+        <div class="dash-header">
+            <div>
+                <h3 id="dashTitle" style="margin: 0;">Dashboard Staff</h3>
+                <small id="dashSubtitle" style="color: #bbb;"></small>
+            </div>
+            <button class="btn-logout" onclick="logout()">Keluar</button>
+        </div>
+        <div class="dash-body" id="dashContent"></div>
+    </div>
+
+    <script>
+        const urlAPI = "https://script.google.com/macros/s/AKfycbxIH8_8WtAX9J8RyKWsWEOfNKYstC4A8e6xsb2OM_3XODYfnvbfwCyp1QQsFyJBDIcH/exec";
+
+        window.onload = function() {
+            const savedRole = localStorage.getItem('login_role');
+            if (savedRole) {
+                tampilkanDashboard(savedRole, localStorage.getItem('login_dept'), localStorage.getItem('login_email'));
+            }
+        };
+
+        document.getElementById('formLogin').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                action: "login",
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(response => {
+                if (response.status === "success") {
+                    localStorage.setItem('login_role', response.role);
+                    localStorage.setItem('login_dept', response.departemen);
+                    localStorage.setItem('login_email', response.email);
+                    tampilkanDashboard(response.role, response.departemen, response.email);
+                } else {
+                    alert(response.message);
+                }
+            })
+            .catch(err => alert('Terjadi kesalahan koneksi.'));
+        });
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function tampilkanDashboard(role, departemen, email) {
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'block';
+            document.getElementById('dashSubtitle').textContent = `${email} (${role.toUpperCase()})`;
+
+            const cleanRole = role.toLowerCase().trim();
+            if (cleanRole.includes('staff')) {
+                renderDashboardStaff(departemen);
+            } else if (cleanRole === 'management') {
+                renderDashboardManagement();
+            } else if (cleanRole === 'ktu') {
+                renderDashboardKTU();
+            }
+        }
+
+        // 1. Dashboard Staff Departemen
+        function renderDashboardStaff(departemen) {
+            document.getElementById('dashTitle').textContent = `Dashboard Staff Departemen: ${departemen}`;
+            const container = document.getElementById('dashContent');
+            
+            container.innerHTML = `
+                <h4>📦 Notifikasi Permintaan Barang Masuk (${departemen})</h4>
+                <div style="overflow-x: auto;">
+                    <table id="tabelLogStaff">
+                        <thead>
+                            <tr>
+                                <th>Tanggal/Jam</th>
+                                <th>Nama Pengguna</th>
+                                <th>Material</th>
+                                <th>Jumlah</th>
+                                <th>Kegunaan</th>
+                                <th>Status Reservasi</th>
+                                <th>No. Reservasi</th>
+                                <th>Aksi Konfirmasi</th>
+                            </tr>
+                        </thead>
+                        <tbody><tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr></tbody>
+                    </table>
+                </div>
+            `;
+
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                const filtered = data.filter(item => item.departemen_pengguna.toLowerCase() === departemen.toLowerCase());
+                const tbody = document.querySelector('#tabelLogStaff tbody');
+                tbody.innerHTML = '';
+                
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Belum ada permintaan barang.</td></tr>';
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    let tr = document.createElement('tr');
+                    let statusBadge = item.status_reservasi === 'Sudah' ? 'badge-success' : 'badge-warning';
+                    let aksiHtml = (item.status_reservasi === 'Belum' || !item.nomor_reservasi || item.nomor_reservasi === '-') ? 
+                        `<button onclick="konfirmasiReservasiStaff('${item.id_permintaan}')" style="background:#007bff; color:white; border:none; padding:5px 8px; border-radius:3px; cursor:pointer;">Konfirmasi Reservasi</button>` : 
+                        `<span style="color: #16a34a; font-weight: bold; background: #dcfce7; padding: 4px 8px; border-radius: 4px; font-size: 11px;">✓ Terkonfirmasi (${item.nomor_reservasi})</span>`;
+
+                    tr.innerHTML = `
+                        <td>${item.tanggal} ${item.jam}</td>
+                        <td>${item.nama_pengguna}</td>
+                        <td>${item.nama_material} (${item.nomor_material})</td>
+                        <td><b>${item.jumlah}</b></td>
+                        <td>${item.kegunaan}</td>
+                        <td><span class="badge ${statusBadge}">${item.status_reservasi}</span></td>
+                        <td>${item.nomor_reservasi || '-'}</td>
+                        <td>${aksiHtml}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function konfirmasiReservasiStaff(idPermintaan) {
+            let noRes = prompt("Masukkan Nomor Reservasi untuk konfirmasi:");
+            if (noRes && noRes.trim() !== "") {
+                const payload = {
+                    action: "updateReservasi",
+                    id_permintaan: idPermintaan,
+                    nomor_reservasi: noRes.trim()
+                };
+
+                fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+                .then(res => res.json())
+                .then(response => {
+                    alert(response.message);
+                    renderDashboardStaff(localStorage.getItem('login_dept'));
+                })
+                .catch(err => alert('Gagal menyimpan nomor reservasi.'));
+            }
+        }
+
+        // 2. Dashboard Management
+        function renderDashboardManagement() {
+            document.getElementById('dashTitle').textContent = `Dashboard Management Umum (Pemantauan)`;
+            const container = document.getElementById('dashContent');
+            container.innerHTML = `
+                <h4>📊 Riwayat Seluruh Permintaan Barang Gudang</h4>
+                <div style="overflow-x: auto;">
+                    <table id="tabelMgmt">
+                        <thead><tr><th>Tanggal</th><th>Dept</th><th>Pengguna</th><th>Material</th><th>Jumlah</th><th>Approval KTU</th></tr></thead>
+                        <tbody><tr><td colspan="6" style="text-align: center;">Memuat riwayat...</td></tr></tbody>
+                    </table>
+                </div>
+            `;
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.querySelector('#tabelMgmt tbody');
+                tbody.innerHTML = '';
+                data.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${item.tanggal}</td><td>${item.departemen_pengguna}</td><td>${item.nama_pengguna}</td><td>${item.nama_material}</td><td>${item.jumlah}</td><td><span class="badge ${item.approval === 'Iya' ? 'badge-success' : 'badge-warning'}">${item.approval}</span></td>`;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // 3. Dashboard KTU (Approval Terkunci jika Sudah, & Kelola Stok)
+        function renderDashboardKTU() {
+            document.getElementById('dashTitle').textContent = `Dashboard KTU (Manajemen & Approval)`;
+            const container = document.getElementById('dashContent');
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <button onclick="switchKtuTab('approval')" id="btnTabApp" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Approval Permintaan</button>
+                    <button onclick="switchKtuTab('gudang')" id="btnTabGudang" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Kelola Stok & Material</button>
+                </div>
+
+                <div id="ktu-content-approval">
+                    <h4>✅ Kelola Approval & Update Jumlah Barang</h4>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelKTU">
+                            <thead><tr><th>ID & Tanggal</th><th>Pengguna (Dept)</th><th>Material</th><th>Jumlah</th><th>Reservasi</th><th>Approval</th><th>Aksi</th></tr></thead>
+                            <tbody><tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="ktu-content-gudang" style="display: none;">
+                    <h4>📦 Tambah / Update Stok Material Gudang</h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ddd;">
+                        <form id="formBarangKTU" onsubmit="simpanBarangKTU(event)">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="kt_nomor" required placeholder="No. Material (Cth: MTR-001)" style="padding:6px;">
+                                <input type="text" id="kt_nama" required placeholder="Nama Material" style="padding:6px;">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="kt_rak" required placeholder="Rak" style="padding:6px;">
+                                <input type="text" id="kt_lokasi" required placeholder="Lokasi" style="padding:6px;">
+                                <input type="number" id="kt_stock" required placeholder="Jumlah Stok" style="padding:6px;">
+                            </div>
+                            <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Simpan / Update ke Spreadsheet</button>
+                        </form>
+                    </div>
+                    <h5>Daftar Stok Saat Ini</h5>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelStokKTU">
+                            <thead><tr><th>No. Material</th><th>Nama Material</th><th>Rak</th><th>Lokasi</th><th>Stock</th></tr></thead>
+                            <tbody><tr><td colspan="5" style="text-align: center;">Memuat stok...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            loadDataApprovalKTU();
+            loadStokGudangKTU();
+        }
+
+        function switchKtuTab(tab) {
+            const appDiv = document.getElementById('ktu-content-approval');
+            const gudangDiv = document.getElementById('ktu-content-gudang');
+            const btnApp = document.getElementById('btnTabApp');
+            const btnGudang = document.getElementById('btnTabGudang');
+
+            if (tab === 'approval') {
+                appDiv.style.display = 'block';
+                gudangDiv.style.display = 'none';
+                btnApp.style.background = '#007bff';
+                btnGudang.style.background = '#6c757d';
+            } else {
+                appDiv.style.display = 'none';
+                gudangDiv.style.display = 'block';
+                btnApp.style.background = '#6c757d';
+                btnGudang.style.background = '#007bff';
+            }
+        }
+
+        function loadDataApprovalKTU() {
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.querySelector('#tabelKTU tbody');
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Tidak ada data log.</td></tr>';
+                    return;
+                }
+                data.forEach(item => {
+                    let tr = document.createElement('tr');
+                    
+                    // Jumlah dikunci (text biasa) jika sudah di-approve, bisa diedit jika belum
+                    let kolomJumlah = item.approval === 'Iya' ? 
+                        `<b>${item.jumlah}</b>` : 
+                        `<input type="number" id="jml_${item.id_permintaan}" value="${item.jumlah}" style="width: 50px; padding: 4px;">`;
+
+                    let kolomAksi = item.approval === 'Belum' ? 
+                        `<button onclick="prosesApproval('${item.id_permintaan}')" style="background:#28a745; color:white; border:none; padding:6px 10px; border-radius:3px; cursor:pointer; font-weight:bold;">Approve</button>` : 
+                        '<span style="color: green; font-weight: bold;">Selesai (Terkunci)</span>';
+
+                    tr.innerHTML = `
+                        <td><small>${item.id_permintaan}</small><br>${item.tanggal}</td>
+                        <td>${item.nama_pengguna}<br>(${item.departemen_pengguna})</td>
+                        <td>${item.nama_material} (${item.nomor_material})</td>
+                        <td>${kolomJumlah}</td>
+                        <td>${item.status_reservasi} (${item.nomor_reservasi || '-'})</td>
+                        <td><strong>${item.approval}</strong></td>
+                        <td>${kolomAksi}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function loadStokGudangKTU() {
+            fetch(urlAPI + "?action=getBarang")
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.querySelector('#tabelStokKTU tbody');
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Kosong.</td></tr>';
+                    return;
+                }
+                data.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${item.nomor_material}</td><td>${item.nama_material}</td><td>${item.rak}</td><td>${item.lokasi}</td><td><b>${item.stock}</b></td>`;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function prosesApproval(idPermintaan) {
+            const jmlInput = document.getElementById('jml_' + idPermintaan);
+            const jumlahBaru = jmlInput ? jmlInput.value : 0;
+
+            if (confirm("Setujui permintaan ini dan potong stok gudang otomatis?")) {
+                fetch(urlAPI, { method: 'POST', body: JSON.stringify({ action: "updateApproval", id_permintaan: idPermintaan, jumlah_baru: jumlahBaru }) })
+                .then(res => res.json())
+                .then(res => { alert(res.message); loadDataApprovalKTU(); loadStokGudangKTU(); });
+            }
+        }
+
+        function simpanBarangKTU(e) {
+            e.preventDefault();
+            const payload = {
+                action: "updateBarang",
+                nomor_material: document.getElementById('kt_nomor').value,
+                nama_material: document.getElementById('kt_nama').value,
+                rak: document.getElementById('kt_rak').value,
+                lokasi: document.getElementById('kt_lokasi').value,
+                stock: document.getElementById('kt_stock').value
+            };
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(res => { alert(res.message); loadStokGudangKTU(); document.getElementById('formBarangKTU').reset(); });
+        }
+    </script>
+</body>
+</html>
