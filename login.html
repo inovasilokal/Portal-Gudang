@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Dashboard Gudang - Staff & KTU</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #333; margin-bottom: 5px; text-align: center; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 20px; }
+        .form-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        .btn-primary { background-color: #007bff; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .back-link { display: block; text-align: center; margin-top: 15px; font-size: 13px; color: #666; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        
+        #dashboard-container { display: none; width: 100%; max-width: 1000px; }
+        .dash-header { background: #343a40; color: white; padding: 15px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .dash-body { background: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-logout { background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-print { background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f8f9fa; cursor: pointer; }
+        th:hover { background: #e2e6ea; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-warning { background: #ffc107; color: #333; }
+        .badge-success { background: #28a745; color: white; }
+        .badge-danger { background: #dc3545; color: white; }
+        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 12px; }
+        .pagination button { padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .pagination button:disabled { background: #ccc; cursor: not-allowed; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            #dashboard-container { max-width: 100%; }
+            .dash-header, .navbar, .btn-print, .pagination, input, select, button { display: none !important; }
+            table { font-size: 11px; width: 100% !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card" id="login-card">
+        <h2>🔑 Login Staff & KTU</h2>
+        <p class="subtitle">Khusus Staff Departemen, Management, & KTU</p>
+        
+        <form id="formLogin">
+            <div class="form-group">
+                <label>Email Akses</label>
+                <input type="email" id="email" required placeholder="nama@perusahaan.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-primary">Masuk ke Dashboard</button>
+        </form>
+        <a href="index.html" class="back-link">← Kembali ke Portal Pengguna Umum</a>
+    </div>
+
+    <div id="dashboard-container">
+        <div class="dash-header">
+            <div>
+                <h3 id="dashTitle" style="margin: 0;">Dashboard Staff</h3>
+                <small id="dashSubtitle" style="color: #bbb;"></small>
+            </div>
+            <button class="btn-logout" onclick="logout()">Keluar</button>
+        </div>
+        <div class="dash-body" id="dashContent"></div>
+    </div>
+
+    <script>
+        const urlAPI = "https://script.google.com/macros/s/AKfycbxmzBoSsHvGDInSG7fT75c_zjtwNGbvzDzygW9ZWy7ADSbc1L68ChLh-2FHNJvAI1Yi/exec";
+        let itemsPerPage = 50;
+
+        window.onload = function() {
+            const savedRole = localStorage.getItem('login_role');
+            if (savedRole) {
+                tampilkanDashboard(savedRole, localStorage.getItem('login_dept'), localStorage.getItem('login_email'));
+            }
+        };
+
+        document.getElementById('formLogin').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                action: "login",
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(response => {
+                if (response.status === "success") {
+                    localStorage.setItem('login_role', response.role);
+                    localStorage.setItem('login_dept', response.departemen);
+                    localStorage.setItem('login_email', response.email);
+                    tampilkanDashboard(response.role, response.departemen, response.email);
+                } else {
+                    alert(response.message);
+                }
+            })
+            .catch(err => alert('Terjadi kesalahan koneksi.'));
+        });
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function tampilkanDashboard(role, departemen, email) {
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'block';
+            document.getElementById('dashSubtitle').textContent = `${email} (${role.toUpperCase()})`;
+
+            const cleanRole = role.toLowerCase().trim();
+            if (cleanRole.includes('staff')) {
+                renderDashboardStaff(departemen);
+            } else if (cleanRole === 'management') {
+                renderDashboardManagement();
+            } else if (cleanRole === 'ktu') {
+                renderDashboardKTU();
+            }
+        }
+
+        // ================= FUNGSI CETAK SEMUA HALAMAN (PRINT ALL) =================
+        function cetakSemuaData(jenisTabel) {
+            let oldPageStaff = currentPageStaff;
+            let oldPageMgmt = currentPageMgmt;
+            let oldPageKTU = currentPageKTU;
+            let oldPageStokStaff = currentPageStokStaff;
+            let oldPageStokMgmt = currentPageStokMgmt;
+            let oldPageStokKTU = currentPageStokKTU;
+
+            itemsPerPage = 999999; // Buka semua batasan paginasi sementara
+
+            if (jenisTabel === 'staff_req') renderTableStaffPaginated();
+            if (jenisTabel === 'staff_stok') renderStokStaffPaginated();
+            if (jenisTabel === 'mgmt_req') renderTableMgmtPaginated();
+            if (jenisTabel === 'mgmt_stok') renderStokMgmtPaginated();
+            if (jenisTabel === 'ktu_app') filterAndRenderApproval();
+            if (jenisTabel === 'ktu_stok') renderStokKTUPaginated();
+
+            setTimeout(() => {
+                window.print();
+                
+                itemsPerPage = 50; // Kembalikan ke 50 item per halaman
+                currentPageStaff = oldPageStaff;
+                currentPageMgmt = oldPageMgmt;
+                currentPageKTU = oldPageKTU;
+                currentPageStokStaff = oldPageStokStaff;
+                currentPageStokMgmt = oldPageStokMgmt;
+                currentPageStokKTU = oldPageStokKTU;
+
+                if (jenisTabel === 'staff_req') renderTableStaffPaginated();
+                if (jenisTabel === 'staff_stok') renderStokStaffPaginated();
+                if (jenisTabel === 'mgmt_req') renderTableMgmtPaginated();
+                if (jenisTabel === 'mgmt_stok') renderStokMgmtPaginated();
+                if (jenisTabel === 'ktu_app') filterAndRenderApproval();
+                if (jenisTabel === 'ktu_stok') renderStokKTUPaginated();
+            }, 500);
+        }
+
+        // ================= 1. DASHBOARD STAFF =================
+        let cacheLogStaff = [];
+        let currentPageStaff = 1;
+        let cacheStokStaff = [];
+        let currentPageStokStaff = 1;
+
+        function renderDashboardStaff(departemen) {
+            document.getElementById('dashTitle').textContent = `Dashboard Staff Departemen: ${departemen}`;
+            const container = document.getElementById('dashContent');
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="switchStaffTab('permintaan')" id="btnTabStaffReq" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Permintaan Masuk</button>
+                        <button onclick="switchStaffTab('stok')" id="btnTabStaffStok" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📦 Lihat & Atur Warning Stok</button>
+                    </div>
+                    <button class="btn-print" onclick="cetakSemuaData(document.getElementById('staff-content-permintaan').style.display !== 'none' ? 'staff_req' : 'staff_stok')">🖨️ Cetak / Simpan PDF</button>
+                </div>
+
+                <div id="staff-content-permintaan">
+                    <h4>📦 Notifikasi Permintaan Barang Masuk (${departemen})</h4>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelLogStaff">
+                            <thead><tr><th>Tanggal/Jam</th><th>Nama Pengguna</th><th>Material</th><th>Jumlah</th><th>Kegunaan</th><th>No. Reservasi</th><th>Aksi</th></tr></thead>
+                            <tbody><tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationStaff"></div>
+                </div>
+
+                <div id="staff-content-stok" style="display: none;">
+                    <h4>📦 Daftar Stock Gudang & Pengaturan Warning Low Stock</h4>
+                    <input type="text" id="cariStokStaff" placeholder="🔍 Cari nomor, nama, satuan, atau jenis..." onkeyup="filterStokStaff()" style="max-width: 300px; padding: 6px; margin-bottom: 10px;">
+                    <div style="overflow-x: auto;">
+                        <table id="tabelStokStaff">
+                            <thead><tr><th>No. Material</th><th>Nama Material</th><th>Rak</th><th>Lokasi</th><th>Stock</th><th>Satuan</th><th>Jenis</th><th>Status Warning / Aksi Setting</th></tr></thead>
+                            <tbody><tr><td colspan="8" style="text-align: center;">Memuat stok...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationStokStaff"></div>
+                </div>
+            `;
+
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                cacheLogStaff = (data || []).filter(item => item.departemen_pengguna.toLowerCase() === departemen.toLowerCase());
+                renderTableStaffPaginated();
+            });
+
+            loadStokGudangStaff();
+        }
+
+        function switchStaffTab(tab) {
+            const reqDiv = document.getElementById('staff-content-permintaan');
+            const stokDiv = document.getElementById('staff-content-stok');
+            const btnReq = document.getElementById('btnTabStaffReq');
+            const btnStok = document.getElementById('btnTabStaffStok');
+
+            if (tab === 'permintaan') {
+                reqDiv.style.display = 'block';
+                stokDiv.style.display = 'none';
+                btnReq.style.background = '#007bff';
+                btnStok.style.background = '#6c757d';
+            } else {
+                reqDiv.style.display = 'none';
+                stokDiv.style.display = 'block';
+                btnReq.style.background = '#6c757d';
+                btnStok.style.background = '#007bff';
+            }
+        }
+
+        function renderTableStaffPaginated() {
+            const totalPages = Math.ceil(cacheLogStaff.length / itemsPerPage) || 1;
+            if (currentPageStaff > totalPages) currentPageStaff = totalPages;
+            const startIdx = (currentPageStaff - 1) * itemsPerPage;
+            const paginatedData = cacheLogStaff.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelLogStaff tbody');
+            tbody.innerHTML = paginatedData.length === 0 ? '<tr><td colspan="7" style="text-align: center;">Belum ada permintaan barang.</td></tr>' : '';
+            
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                let aksiHtml = (!item.nomor_reservasi || item.nomor_reservasi === '-') ? 
+                    `<button onclick="konfirmasiReservasiStaff('${item.id_permintaan}')" style="background:#007bff; color:white; border:none; padding:5px 8px; border-radius:3px; cursor:pointer;">Konfirmasi Reservasi</button>` : 
+                    `<span style="color: #16a34a; font-weight: bold; background: #dcfce7; padding: 4px 8px; border-radius: 4px; font-size: 11px;">✓ (${item.nomor_reservasi})</span>`;
+
+                tr.innerHTML = `<td>${item.tanggal} ${item.jam}</td><td>${item.nama_pengguna}</td><td>${item.nama_material} (${item.nomor_material})</td><td><b>${item.jumlah}</b></td><td>${item.kegunaan}</td><td>${item.nomor_reservasi || '-'}</td><td>${aksiHtml}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationStaff').innerHTML = `
+                <span>Hal ${currentPageStaff}/${totalPages} (Total ${cacheLogStaff.length} data)</span>
+                <div>
+                    <button onclick="changePageStaff(-1)" ${currentPageStaff === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageStaff(1)" ${currentPageStaff === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function changePageStaff(dir) {
+            currentPageStaff += dir;
+            renderTableStaffPaginated();
+        }
+
+        function konfirmasiReservasiStaff(idPermintaan) {
+            let noRes = prompt("Masukkan Nomor Reservasi:");
+            if (noRes && noRes.trim() !== "") {
+                fetch(urlAPI, { method: 'POST', body: JSON.stringify({ action: "updateReservasi", id_permintaan: idPermintaan, nomor_reservasi: noRes.trim() }) })
+                .then(res => res.json())
+                .then(res => { alert(res.message); renderDashboardStaff(localStorage.getItem('login_dept')); });
+            }
+        }
+
+        function loadStokGudangStaff() {
+            fetch(urlAPI + "?action=getBarang")
+            .then(res => res.json())
+            .then(data => {
+                cacheStokStaff = data || [];
+                renderStokStaffPaginated();
+            });
+        }
+
+        function renderStokStaffPaginated() {
+            const searchInput = document.getElementById('cariStokStaff');
+            const keyword = searchInput ? searchInput.value.toLowerCase() : '';
+            const filtered = cacheStokStaff.filter(item => 
+                String(item.nomor_material).toLowerCase().includes(keyword) || 
+                String(item.nama_material).toLowerCase().includes(keyword) ||
+                String(item.satuan).toLowerCase().includes(keyword) ||
+                String(item.jenis_material).toLowerCase().includes(keyword)
+            );
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPageStokStaff > totalPages) currentPageStokStaff = totalPages;
+            const startIdx = (currentPageStokStaff - 1) * itemsPerPage;
+            const paginatedData = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelStokStaff tbody');
+            tbody.innerHTML = '';
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data barang.</td></tr>';
+                document.getElementById('paginationStokStaff').innerHTML = '';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                let isLowStock = item.warning_aktif === 'Ya' && Number(item.stock) <= Number(item.min_stock);
+                let warningBadge = isLowStock ? 
+                    `<span class="badge badge-danger" style="display:inline-block; margin-bottom:5px;">⚠️ Stok Menipis! (Min: ${item.min_stock})</span><br>` : 
+                    (item.warning_aktif === 'Ya' ? `<small style="color:green;">✓ Warning Aktif (Min: ${item.min_stock})</small><br>` : `<small style="color:#888;">Warning Nonaktif</small><br>`);
+
+                let settingBtn = `<button onclick="aturWarning('${item.nomor_material}', '${item.warning_aktif}', ${item.min_stock})" style="background:#6c757d; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px;">⚙️ Atur Warning</button>`;
+
+                tr.innerHTML = `
+                    <td>${item.nomor_material}</td>
+                    <td>${item.nama_material}</td>
+                    <td>${item.rak}</td>
+                    <td>${item.lokasi}</td>
+                    <td><b>${item.stock}</b></td>
+                    <td>${item.satuan}</td>
+                    <td><span style="font-weight:bold; color:${item.jenis_material === 'DSTA' ? '#007bff' : '#28a745'};">${item.jenis_material}</span></td>
+                    <td>${warningBadge} ${settingBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationStokStaff').innerHTML = `
+                <span>Hal ${currentPageStokStaff}/${totalPages} (Total ${filtered.length} data)</span>
+                <div>
+                    <button onclick="changePageStokStaff(-1)" ${currentPageStokStaff === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageStokStaff(1)" ${currentPageStokStaff === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function aturWarning(nomorMaterial, currentAktif, currentMin) {
+            let aktif = prompt("Aktifkan warning untuk material " + nomorMaterial + "?\nKetik: 'Ya' atau 'Tidak'", currentAktif || "Ya");
+            if (!aktif) return;
+            aktif = aktif.trim();
+            if (aktif.toLowerCase() !== 'ya' && aktif.toLowerCase() !== 'tidak') {
+                alert("Harap ketik 'Ya' atau 'Tidak'!");
+                return;
+            }
+
+            let minStock = prompt("Masukkan batas minimal stok untuk warning:", currentMin || 5);
+            if (minStock === null) return;
+
+            fetch(urlAPI, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: "updateWarningConfig",
+                    nomor_material: nomorMaterial,
+                    warning_aktif: aktif.charAt(0).toUpperCase() + aktif.slice(1).toLowerCase(),
+                    min_stock: Number(minStock) || 0
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                loadStokGudangStaff();
+            })
+            .catch(err => alert('Gagal menyimpan pengaturan warning.'));
+        }
+
+        function filterStokStaff() {
+            currentPageStokStaff = 1;
+            renderStokStaffPaginated();
+        }
+
+        function changePageStokStaff(dir) {
+            currentPageStokStaff += dir;
+            renderStokStaffPaginated();
+        }
+
+
+        // ================= 2. DASHBOARD MANAGEMENT =================
+        let cacheLogMgmt = [];
+        let currentPageMgmt = 1;
+        let cacheStokMgmt = [];
+        let currentPageStokMgmt = 1;
+
+        function renderDashboardManagement() {
+            document.getElementById('dashTitle').textContent = `Dashboard Management Umum`;
+            const container = document.getElementById('dashContent');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="switchMgmtTab('riwayat')" id="btnTabMgmtRiwayat" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Riwayat Permintaan</button>
+                        <button onclick="switchMgmtTab('stok')" id="btnTabMgmtStok" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📦 Lihat Stok Gudang</button>
+                    </div>
+                    <button class="btn-print" onclick="cetakSemuaData(document.getElementById('mgmt-content-riwayat').style.display !== 'none' ? 'mgmt_req' : 'mgmt_stok')">🖨️ Cetak / Simpan PDF</button>
+                </div>
+
+                <div id="mgmt-content-riwayat">
+                    <h4>📊 Riwayat Pemantauan Seluruh Permintaan</h4>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelMgmt">
+                            <thead><tr><th>Tanggal</th><th>Dept</th><th>Pengguna</th><th>Material</th><th>Jumlah</th><th>Approval</th></tr></thead>
+                            <tbody><tr><td colspan="6" style="text-align:center;">Memuat...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationMgmt"></div>
+                </div>
+
+                <div id="mgmt-content-stok" style="display: none;">
+                    <h4>📦 Daftar Stock Gudang & Status Peringatan</h4>
+                    <input type="text" id="cariStokMgmt" placeholder="🔍 Cari nomor, nama, satuan, atau jenis..." onkeyup="filterStokMgmt()" style="max-width: 300px; padding: 6px; margin-bottom: 10px;">
+                    <div style="overflow-x: auto;">
+                        <table id="tabelStokMgmt">
+                            <thead><tr><th>No. Material</th><th>Nama Material</th><th>Rak</th><th>Lokasi</th><th>Stock</th><th>Satuan</th><th>Jenis</th><th>Status Warning</th></tr></thead>
+                            <tbody><tr><td colspan="8" style="text-align: center;">Memuat stok...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationStokMgmt"></div>
+                </div>
+            `;
+
+            fetch(urlAPI + "?action=getLog").then(res => res.json()).then(data => {
+                cacheLogMgmt = data || [];
+                renderTableMgmtPaginated();
+            });
+
+            loadStokGudangMgmt();
+        }
+
+        function switchMgmtTab(tab) {
+            const riwayatDiv = document.getElementById('mgmt-content-riwayat');
+            const stokDiv = document.getElementById('mgmt-content-stok');
+            const btnRiwayat = document.getElementById('btnTabMgmtRiwayat');
+            const btnStok = document.getElementById('btnTabMgmtStok');
+
+            if (tab === 'riwayat') {
+                riwayatDiv.style.display = 'block';
+                stokDiv.style.display = 'none';
+                btnRiwayat.style.background = '#007bff';
+                btnStok.style.background = '#6c757d';
+            } else {
+                riwayatDiv.style.display = 'none';
+                stokDiv.style.display = 'block';
+                btnRiwayat.style.background = '#6c757d';
+                btnStok.style.background = '#007bff';
+            }
+        }
+
+        function renderTableMgmtPaginated() {
+            const totalPages = Math.ceil(cacheLogMgmt.length / itemsPerPage) || 1;
+            if (currentPageMgmt > totalPages) currentPageMgmt = totalPages;
+            const startIdx = (currentPageMgmt - 1) * itemsPerPage;
+            const paginatedData = cacheLogMgmt.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelMgmt tbody');
+            tbody.innerHTML = '';
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${item.tanggal}</td><td>${item.departemen_pengguna}</td><td>${item.nama_pengguna}</td><td>${item.nama_material}</td><td>${item.jumlah}</td><td><span class="badge ${item.approval === 'Iya' ? 'badge-success' : 'badge-warning'}">${item.approval}</span></td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationMgmt').innerHTML = `
+                <span>Hal ${currentPageMgmt}/${totalPages} (Total ${cacheLogMgmt.length} data)</span>
+                <div>
+                    <button onclick="changePageMgmt(-1)" ${currentPageMgmt === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageMgmt(1)" ${currentPageMgmt === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function changePageMgmt(dir) {
+            currentPageMgmt += dir;
+            renderTableMgmtPaginated();
+        }
+
+        function loadStokGudangMgmt() {
+            fetch(urlAPI + "?action=getBarang")
+            .then(res => res.json())
+            .then(data => {
+                cacheStokMgmt = data || [];
+                renderStokMgmtPaginated();
+            });
+        }
+
+        function renderStokMgmtPaginated() {
+            const searchInput = document.getElementById('cariStokMgmt');
+            const keyword = searchInput ? searchInput.value.toLowerCase() : '';
+            const filtered = cacheStokMgmt.filter(item => 
+                String(item.nomor_material).toLowerCase().includes(keyword) || 
+                String(item.nama_material).toLowerCase().includes(keyword) ||
+                String(item.satuan).toLowerCase().includes(keyword) ||
+                String(item.jenis_material).toLowerCase().includes(keyword)
+            );
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPageStokMgmt > totalPages) currentPageStokMgmt = totalPages;
+            const startIdx = (currentPageStokMgmt - 1) * itemsPerPage;
+            const paginatedData = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelStokMgmt tbody');
+            tbody.innerHTML = '';
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data barang.</td></tr>';
+                document.getElementById('paginationStokMgmt').innerHTML = '';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                let isLowStock = item.warning_aktif === 'Ya' && Number(item.stock) <= Number(item.min_stock);
+                let warningText = isLowStock ? `<span class="badge badge-danger">⚠️ Stok Menipis! (Min: ${item.min_stock})</span>` : (item.warning_aktif === 'Ya' ? `<span style="color:green;">Aman (Min: ${item.min_stock})</span>` : `<span style="color:#888;">Nonaktif</span>`);
+
+                tr.innerHTML = `<td>${item.nomor_material}</td><td>${item.nama_material}</td><td>${item.rak}</td><td>${item.lokasi}</td><td><b>${item.stock}</b></td><td>${item.satuan}</td><td><span style="font-weight:bold; color:${item.jenis_material === 'DSTA' ? '#007bff' : '#28a745'};">${item.jenis_material}</span></td><td>${warningText}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationStokMgmt').innerHTML = `
+                <span>Hal ${currentPageStokMgmt}/${totalPages} (Total ${filtered.length} data)</span>
+                <div>
+                    <button onclick="changePageStokMgmt(-1)" ${currentPageStokMgmt === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageStokMgmt(1)" ${currentPageStokMgmt === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function filterStokMgmt() {
+            currentPageStokMgmt = 1;
+            renderStokMgmtPaginated();
+        }
+
+        function changePageStokMgmt(dir) {
+            currentPageStokMgmt += dir;
+            renderStokMgmtPaginated();
+        }
+
+
+        // ================= 3. DASHBOARD KTU =================
+        let cacheLogKTU = [];
+        let currentPageKTU = 1;
+        let cacheStokKTU = [];
+        let currentPageStokKTU = 1;
+        let currentSortColumn = '';
+        let currentSortAsc = true;
+
+        function renderDashboardKTU() {
+            document.getElementById('dashTitle').textContent = `Dashboard KTU (Manajemen & Approval)`;
+            const container = document.getElementById('dashContent');
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="switchKtuTab('approval')" id="btnTabApp" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Approval Permintaan</button>
+                        <button onclick="switchKtuTab('gudang')" id="btnTabGudang" style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Kelola Stok & Material</button>
+                    </div>
+                    <button class="btn-print" onclick="cetakSemuaData(document.getElementById('ktu-content-approval').style.display !== 'none' ? 'ktu_app' : 'ktu_stok')">🖨️ Cetak / Simpan PDF</button>
+                </div>
+
+                <div id="ktu-content-approval">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <input type="text" id="searchApproval" placeholder="🔍 Cari ID, Nama, Dept, atau Material..." onkeyup="filterAndRenderApproval()" style="max-width: 300px; padding: 6px;">
+                        <span style="font-size: 12px; color: #666; align-self: center;">Klik judul kolom tabel untuk sorting.</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelKTU">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('id_permintaan')">ID & Tanggal ↕</th>
+                                    <th onclick="sortTable('departemen_pengguna')">Pengguna (Dept) ↕</th>
+                                    <th onclick="sortTable('nama_material')">Material ↕</th>
+                                    <th onclick="sortTable('jumlah')">Jumlah ↕</th>
+                                    <th onclick="sortTable('nomor_reservasi')">Reservasi ↕</th>
+                                    <th onclick="sortTable('approval')">Approval ↕</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationKTU"></div>
+                </div>
+
+                <div id="ktu-content-gudang" style="display: none;">
+                    <h4>📦 Tambah Stok Saja atau Update Barang</h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #ddd;">
+                        <form id="formBarangKTU" onsubmit="simpanBarangKTU(event)">
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <div style="flex: 1;">
+                                    <label style="font-size:11px; font-weight:bold;">Mode Aksi</label>
+                                    <select id="kt_mode" onchange="gantiModeForm(this.value)" style="padding:6px;">
+                                        <option value="tambah_stok">➕ Tambah Stok Saja (Restock)</option>
+                                        <option value="update_full">✏️ Input / Update Data Lengkap</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label style="font-size:11px; font-weight:bold;">Nomor Material</label>
+                                    <input type="text" id="kt_nomor" required placeholder="Cth: MTR-001" style="padding:6px;">
+                                </div>
+                            </div>
+                            <div id="form-full-fields" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                    <input type="text" id="kt_nama" placeholder="Nama Material" style="padding:6px;">
+                                    <input type="text" id="kt_rak" placeholder="Rak" style="padding:6px;">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                    <input type="text" id="kt_lokasi" placeholder="Lokasi" style="padding:6px;">
+                                    <input type="number" id="kt_stock_full" placeholder="Stok Total" style="padding:6px;">
+                                    <input type="text" id="kt_satuan" placeholder="Satuan (Cth: Pcs)" style="padding:6px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size:11px; font-weight:bold;">Jenis Material</label>
+                                    <select id="kt_jenis" style="padding:6px;">
+                                        <option value="STORE">STORE</option>
+                                        <option value="DSTA">DSTA</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group" id="form-restock-fields">
+                                <label style="font-size:11px; font-weight:bold;">Jumlah Stok yang Ditambahkan</label>
+                                <input type="number" id="kt_tambah_stock" placeholder="Contoh: 10" style="padding:6px;">
+                            </div>
+                            <button type="submit" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Proses ke Database</button>
+                        </form>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 5px;">
+                        <h5 style="margin: 0;">Daftar Stok Saat Ini</h5>
+                        <input type="text" id="searchStokKTU" placeholder="🔍 Cari nomor, nama, satuan, atau jenis..." onkeyup="filterStokKTU()" style="max-width: 280px; padding: 6px;">
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table id="tabelStokKTU">
+                            <thead><tr><th>No. Material</th><th>Nama Material</th><th>Rak</th><th>Lokasi</th><th>Stock</th><th>Satuan</th><th>Jenis</th><th>Status Warning</th></tr></thead>
+                            <tbody><tr><td colspan="8" style="text-align: center;">Memuat stok...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="paginationStokKTU"></div>
+                </div>
+            `;
+            loadDataApprovalKTU();
+            loadStokGudangKTU();
+        }
+
+        function switchKtuTab(tab) {
+            const appDiv = document.getElementById('ktu-content-approval');
+            const gudangDiv = document.getElementById('ktu-content-gudang');
+            const btnApp = document.getElementById('btnTabApp');
+            const btnGudang = document.getElementById('btnTabGudang');
+
+            if (tab === 'approval') {
+                appDiv.style.display = 'block';
+                gudangDiv.style.display = 'none';
+                btnApp.style.background = '#007bff';
+                btnGudang.style.background = '#6c757d';
+            } else {
+                appDiv.style.display = 'none';
+                gudangDiv.style.display = 'block';
+                btnApp.style.background = '#6c757d';
+                btnGudang.style.background = '#007bff';
+            }
+        }
+
+        function gantiModeForm(mode) {
+            if (mode === 'tambah_stok') {
+                document.getElementById('form-restock-fields').style.display = 'block';
+                document.getElementById('form-full-fields').style.display = 'none';
+                document.getElementById('kt_tambah_stock').required = true;
+            } else {
+                document.getElementById('form-restock-fields').style.display = 'none';
+                document.getElementById('form-full-fields').style.display = 'block';
+                document.getElementById('kt_tambah_stock').required = false;
+            }
+        }
+
+        function loadDataApprovalKTU() {
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                cacheLogKTU = data || [];
+                filterAndRenderApproval();
+            });
+        }
+
+        function filterAndRenderApproval() {
+            const keyword = document.getElementById('searchApproval').value.toLowerCase();
+            let filtered = cacheLogKTU.filter(item => 
+                String(item.id_permintaan).toLowerCase().includes(keyword) ||
+                String(item.nama_pengguna).toLowerCase().includes(keyword) ||
+                String(item.departemen_pengguna).toLowerCase().includes(keyword) ||
+                String(item.nama_material).toLowerCase().includes(keyword) ||
+                String(item.nomor_material).toLowerCase().includes(keyword)
+            );
+
+            if (currentSortColumn) {
+                filtered.sort((a, b) => {
+                    let valA = a[currentSortColumn] || '';
+                    let valB = b[currentSortColumn] || '';
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+                    if (valA < valB) return currentSortAsc ? -1 : 1;
+                    if (valA > valB) return currentSortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPageKTU > totalPages) currentPageKTU = totalPages;
+            const startIdx = (currentPageKTU - 1) * itemsPerPage;
+            const paginatedData = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelKTU tbody');
+            tbody.innerHTML = '';
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Tidak ada data ditemukan.</td></tr>';
+                document.getElementById('paginationKTU').innerHTML = '';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                let kolomJumlah = item.approval === 'Iya' ? 
+                    `<b>${item.jumlah}</b>` : 
+                    `<input type="number" id="jml_${item.id_permintaan}" value="${item.jumlah}" style="width: 50px; padding: 4px;">`;
+
+                let kolomAksi = item.approval === 'Belum' ? 
+                    `<button onclick="prosesApproval('${item.id_permintaan}')" style="background:#28a745; color:white; border:none; padding:6px 10px; border-radius:3px; cursor:pointer; font-weight:bold;">Approve</button>` : 
+                    '<span style="color: green; font-weight: bold;">Selesai (Terkunci)</span>';
+
+                tr.innerHTML = `
+                    <td><small>${item.id_permintaan}</small><br>${item.tanggal}</td>
+                    <td>${item.nama_pengguna}<br>(${item.departemen_pengguna})</td>
+                    <td>${item.nama_material} (${item.nomor_material})</td>
+                    <td>${kolomJumlah}</td>
+                    <td>${item.nomor_reservasi || '-'}</td>
+                    <td><strong>${item.approval}</strong></td>
+                    <td>${kolomAksi}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationKTU').innerHTML = `
+                <span>Hal ${currentPageKTU}/${totalPages} (Total ${filtered.length} data)</span>
+                <div>
+                    <button onclick="changePageKTU(-1)" ${currentPageKTU === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageKTU(1)" ${currentPageKTU === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function sortTable(column) {
+            if (currentSortColumn === column) {
+                currentSortAsc = !currentSortAsc;
+            } else {
+                currentSortColumn = column;
+                currentSortAsc = true;
+            }
+            filterAndRenderApproval();
+        }
+
+        function changePageKTU(dir) {
+            currentPageKTU += dir;
+            filterAndRenderApproval();
+        }
+
+        function loadStokGudangKTU() {
+            fetch(urlAPI + "?action=getBarang")
+            .then(res => res.json())
+            .then(data => {
+                cacheStokKTU = data || [];
+                renderStokKTUPaginated();
+            });
+        }
+
+        function renderStokKTUPaginated() {
+            const searchInput = document.getElementById('searchStokKTU');
+            const keyword = searchInput ? searchInput.value.toLowerCase() : '';
+            const filtered = cacheStokKTU.filter(item => 
+                String(item.nomor_material).toLowerCase().includes(keyword) || 
+                String(item.nama_material).toLowerCase().includes(keyword) ||
+                String(item.satuan).toLowerCase().includes(keyword) ||
+                String(item.jenis_material).toLowerCase().includes(keyword)
+            );
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPageStokKTU > totalPages) currentPageStokKTU = totalPages;
+            const startIdx = (currentPageStokKTU - 1) * itemsPerPage;
+            const paginatedData = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelStokKTU tbody');
+            tbody.innerHTML = '';
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">Tidak ada data ditemukan.</td></tr>';
+                document.getElementById('paginationStokKTU').innerHTML = '';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                let tr = document.createElement('tr');
+                let isLowStock = item.warning_aktif === 'Ya' && Number(item.stock) <= Number(item.min_stock);
+                let warningText = isLowStock ? `<span class="badge badge-danger">⚠️ Stok Menipis! (Min: ${item.min_stock})</span>` : (item.warning_aktif === 'Ya' ? `<span style="color:green;">Aman (Min: ${item.min_stock})</span>` : `<span style="color:#888;">Nonaktif</span>`);
+
+                tr.innerHTML = `<td>${item.nomor_material}</td><td>${item.nama_material}</td><td>${item.rak}</td><td>${item.lokasi}</td><td><b>${item.stock}</b></td><td>${item.satuan}</td><td><span style="font-weight:bold; color:${item.jenis_material === 'DSTA' ? '#007bff' : '#28a745'};">${item.jenis_material}</span></td><td>${warningText}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationStokKTU').innerHTML = `
+                <span>Hal ${currentPageStokKTU}/${totalPages} (Total ${filtered.length} data)</span>
+                <div>
+                    <button onclick="changePageStokKTU(-1)" ${currentPageStokKTU === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageStokKTU(1)" ${currentPageStokKTU === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function filterStokKTU() {
+            currentPageStokKTU = 1;
+            renderStokKTUPaginated();
+        }
+
+        function changePageStokKTU(dir) {
+            currentPageStokKTU += dir;
+            renderStokKTUPaginated();
+        }
+
+        function prosesApproval(idPermintaan) {
+            const jmlInput = document.getElementById('jml_' + idPermintaan);
+            const jumlahBaru = jmlInput ? jmlInput.value : 0;
+            if (confirm("Setujui permintaan ini dan potong stok gudang otomatis?")) {
+                fetch(urlAPI, { method: 'POST', body: JSON.stringify({ action: "updateApproval", id_permintaan: idPermintaan, jumlah_baru: jumlahBaru }) })
+                .then(res => res.json())
+                .then(res => { alert(res.message); loadDataApprovalKTU(); loadStokGudangKTU(); });
+            }
+        }
+
+        function simpanBarangKTU(e) {
+            e.preventDefault();
+            const mode = document.getElementById('kt_mode').value;
+            const nomorMat = document.getElementById('kt_nomor').value.trim();
+
+            if (mode === 'tambah_stok') {
+                const barangAda = cacheStokKTU.some(item => String(item.nomor_material).trim() === nomorMat);
+                if (!barangAda) {
+                    alert("⚠️ Error: Nomor material \"" + nomorMat + "\" tidak terdata di sistem gudang! Gunakan mode 'Input / Update Data Lengkap' jika ini barang baru.");
+                    return;
+                }
+            }
+
+            let payload = { action: "updateBarang", nomor_material: nomorMat, mode: mode };
+
+            if (mode === 'tambah_stok') {
+                payload.stock = document.getElementById('kt_tambah_stock').value;
+            } else {
+                payload.nama_material = document.getElementById('kt_nama').value;
+                payload.rak = document.getElementById('kt_rak').value;
+                payload.lokasi = document.getElementById('kt_lokasi').value;
+                payload.stock = document.getElementById('kt_stock_full').value;
+                payload.satuan = document.getElementById('kt_satuan').value;
+                payload.jenis_material = document.getElementById('kt_jenis').value;
+            }
+
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(res => { 
+                alert(res.message); 
+                loadStokGudangKTU(); 
+                document.getElementById('formBarangKTU').reset(); 
+                gantiModeForm('tambah_stok');
+            })
+            .catch(err => alert('Gagal memproses data barang.'));
+        }
+    </script>
+</body>
+</html>
