@@ -2,58 +2,61 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Gudang - Masuk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Gudang - Login User</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        h2 { color: #333; margin-bottom: 10px; }
-        p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; max-width: 400px; }
+        h2 { color: #333; margin-top: 0; margin-bottom: 5px; text-align: center; font-size: 22px; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 20px; }
         .form-group { text-align: left; margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
-        .btn-primary { background-color: #007bff; color: white; border: none; padding: 12px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
-        .btn-primary:hover { background-color: #0056b3; }
-        .footer-link { margin-top: 20px; display: block; font-size: 13px; color: #007bff; text-decoration: none; }
-        .footer-link:hover { text-decoration: underline; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: #444; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #fafafa; }
+        input:focus, select:focus { border-color: #007bff; outline: none; background: #fff; }
+        .btn-primary { background-color: #007bff; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
+        .btn-primary:active { background-color: #0056b3; }
+        .staff-link { display: block; text-align: center; margin-top: 20px; font-size: 13px; color: #007bff; text-decoration: none; font-weight: bold; }
+        .staff-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>📦 Portal Gudang</h2>
-        <p>Silakan masukkan data diri Anda untuk mulai meminta material.</p>
+        <p class="subtitle">Silakan masuk untuk mengajukan permintaan material</p>
         
-        <form id="formUser">
+        <form id="formUserLogin">
             <div class="form-group">
                 <label>Nama Lengkap</label>
-                <input type="text" id="nama" required placeholder="Contoh: Budi Santoso">
+                <input type="text" id="nama" required placeholder="Cth: Budi Santoso">
             </div>
-            
             <div class="form-group">
                 <label>Departemen</label>
                 <select id="departemen" required>
                     <option value="">-- Pilih Departemen --</option>
-                    <option value="Proses">Proses</option>
-                    <option value="Laboratorium">Laboratorium</option>
-                    <option value="Mechanical">Mechanical</option>
-                    <option value="Electrical">Electrical</option>
-                    <option value="Komposting">Komposting</option>
-                    <option value="Kantor">Kantor</option>
+                    <option value="Produksi">Produksi</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="QA/QC">QA/QC</option>
+                    <option value="Warehouse">Warehouse</option>
+                    <option value="Utility">Utility</option>
                 </select>
             </div>
-            
-            <button type="submit" class="btn-primary">Lanjutkan Meminta Material</button>
+            <button type="submit" class="btn-primary">Masuk ke Dashboard</button>
         </form>
-
-        <a href="login.html" class="footer-link">🔑 Log in untuk masuk ke dashboard gudang (Staff/KTU)</a>
+        <a href="login.html" class="staff-link">🔐 Login Khusus Staff / KTU / Management</a>
     </div>
 
     <script>
-        document.getElementById('formUser').addEventListener('submit', function(e) {
+        document.getElementById('formUserLogin').addEventListener('submit', function(e) {
             e.preventDefault();
-            localStorage.setItem('user_nama', document.getElementById('nama').value);
-            localStorage.setItem('user_departemen', document.getElementById('departemen').value);
-            window.location.href = 'user.html';
+            const nama = document.getElementById('nama').value.trim();
+            const dept = document.getElementById('departemen').value;
+
+            if(nama && dept) {
+                localStorage.setItem('user_nama', nama);
+                localStorage.setItem('user_departemen', dept);
+                window.location.href = 'user.html';
+            }
         });
     </script>
 </body>
