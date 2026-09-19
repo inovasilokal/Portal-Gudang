@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PKS Mobile Dashboard</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-app: #f4f6f9;
+            --card-bg: #ffffff;
+            --dark-card: #0f2231;
+            --primary: #0284c7;
+            --accent-orange: #f97316;
+            --accent-yellow: #fbbf24;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: manipulation; /* Mencegah zoom akibat ketukan ganda (double-tap zoom) */
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-app); margin: 0; padding-bottom: 100px; color: var(--text-main); }
+        
+        /* HEADER MODERN TANPA SHADOW */
+        .header { background: var(--card-bg); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+        .header-title h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--text-main); }
+        .header-title p { margin: 2px 0 0 0; font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+        .container { padding: 16px; width: 100%; max-width: 600px; margin: 0 auto; }
+        
+        /* KARTU FLAT BERSIH TANPA SHADOW */
+        .card { background: var(--card-bg); padding: 18px; border-radius: 20px; margin-bottom: 16px; border: 1px solid var(--border); }
+        
+        /* KARTU GELAP UTAMA TANPA SHADOW */
+        .card-dark { background: var(--dark-card); color: white; padding: 22px; border-radius: 24px; margin-bottom: 16px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .card-dark h3 { color: white; font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .card-dark p { color: #94a3b8; font-size: 12px; margin-bottom: 14px; }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        h3 { margin: 0; color: var(--text-main); font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+        
+        /* FORM INPUT ELEGAN */
+        .form-control { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; background: #f8fafc; color: var(--text-main); outline: none; transition: all 0.2s ease; }
+        .form-control:focus { border-color: var(--primary); background: #fff; }
+
+        /* KPI GRID 2 KOLOM RAPI (TANPA SHADOW) */
+        .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .kpi-card { background: var(--card-bg); border: 1px solid var(--border); padding: 16px; border-radius: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+        .kpi-title { font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .kpi-value { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .kpi-footer { font-size: 10px; color: #94a3b8; margin-top: 4px; font-weight: 500; }
+
+        /* SUMMARY BOX */
+        .summary-box { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
+        .summary-item { background: #f8fafc; border: 1px solid var(--border); padding: 14px; border-radius: 14px; }
+        .summary-item h4 { margin: 0 0 10px 0; font-size: 13px; color: #334155; font-weight: 700; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border); color: #334155; }
+        .summary-row:last-child { border-bottom: none; }
+
+        /* TABEL HALUS & RESPONSIF */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; font-size: 12px; }
+        th, td { border-bottom: 1px solid var(--border); padding: 12px 14px; text-align: left; vertical-align: middle; }
+        th { background: #f8fafc; color: var(--text-muted); font-weight: 700; white-space: nowrap; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+        tr:hover { background: #f8fafc; }
+
+        /* PAGINASI */
+        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+        .pagination button { padding: 6px 14px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; }
+        .pagination button:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+        /* SUBNAV TAMPILAN PILL MODERN */
+        .gudang-subnav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .subnav-btn { background: #f1f5f9; color: var(--text-muted); border: 1px solid var(--border); padding: 10px 14px; border-radius: 12px; font-weight: 700; font-size: 12px; cursor: pointer; flex: 1; text-align: center; min-width: 105px; transition: all 0.2s; }
+        .subnav-btn.active { background: var(--dark-card); color: white; border-color: var(--dark-card); }
+        .gudang-section { display: none; }
+        .gudang-section.active { display: block; }
+
+        /* NAVBAR FLOATING BAWAH TANPA SHADOW TEBAL */
+        .navbar { position: fixed; bottom: 16px; left: 16px; right: 16px; max-width: 560px; margin: 0 auto; background: var(--dark-card); display: flex; border-radius: 24px; z-index: 1000; padding: 8px; border: 1px solid rgba(255,255,255,0.15); }
+        .nav-item { flex: 1; text-align: center; padding: 12px; color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 12px; cursor: pointer; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+        .nav-item.active { color: white; background: var(--accent-orange); font-weight: 700; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* TOMBOL UTAMA & AKSI */
+        .btn-action { padding: 6px 12px; border-radius: 8px; border: none; font-weight: 700; font-size: 11px; cursor: pointer; color: white; white-space: nowrap; }
+        .btn-logout { background: var(--danger); font-size: 11px; padding: 6px 12px; border-radius: 10px; font-weight: 600; }
+        .btn-primary { background: var(--accent-orange); color: white; border: none; padding: 12px 20px; border-radius: 14px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        .btn-success { background: var(--success); color: white; border: none; padding: 8px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 11px; }
+
+        /* BADGE KAPSUL MODERN */
+        .badge-warning { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 10px; border: 1px solid #fecaca; white-space: nowrap; }
+        .badge-safe { background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 10px; border: 1px solid #a7f3d0; white-space: nowrap; }
+        .badge-normal { background: #f1f5f9; color: var(--text-muted); padding: 4px 10px; border-radius: 8px; font-weight: 600; font-size: 10px; white-space: nowrap; }
+        
+        .grafik-controls { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px; }
+        @media (min-width: 768px) {
+            .grafik-controls { flex-direction: row; align-items: center; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-title">
+            <h2>PKS Executive Mobile</h2>
+            <p id="dashSubtitle">Memuat profil...</p>
+        </div>
+        <button class="btn-action btn-logout" onclick="logoutUser()">Keluar</button>
+    </div>
+
+    <div class="container">
+        <!-- TAB 1: DASHBOARD -->
+        <div id="tab-dashboard" class="tab-content active">
+            
+            <!-- KARTU HERO GELAP -->
+            <div class="card-dark">
+                <h3>📊 Ringkasan Operasional PKS</h3>
+                <p>Data harian pabrik terpantau stabil dan real-time.</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                    <div>
+                        <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Status Pabrik</span>
+                        <div style="font-size: 14px; font-weight: 700; color: #34d399; margin-top: 2px;">🟢 Beroperasi Normal</div>
+                    </div>
+                    <button class="btn-action" style="background: var(--accent-orange); color: white; padding: 8px 16px; border-radius: 12px; font-weight: 700;" onclick="loadDashboardData()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- 6 KARTU KPI UTAMA -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">Total TBS Olah</div>
+                    <div class="kpi-value" id="statTbsOlah">0 Ton</div>
+                    <div class="kpi-footer">Akumulasi Harian</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Restan Akhir</div>
+                    <div class="kpi-value" id="statRestan">0 Ton</div>
+                    <div class="kpi-footer">Sisa Buah di Pabrik</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">OER CPO</div>
+                    <div class="kpi-value" id="statOerCpo">0 %</div>
+                    <div class="kpi-footer">Rata-rata CPO</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">OER HFC</div>
+                    <div class="kpi-value" id="statOerHfc">0 %</div>
+                    <div class="kpi-footer">Rata-rata HFC</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Rata-rata KER</div>
+                    <div class="kpi-value" id="statKer">0 %</div>
+                    <div class="kpi-footer">Kernel Production</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Throughput</div>
+                    <div class="kpi-value" id="statThroughput">0 Ton/Jam</div>
+                    <div class="kpi-footer">Kapasitas Olah</div>
+                </div>
+            </div>
+
+            <!-- KONTROL FILTER TANGGAL -->
+            <div class="card" style="padding: 14px 18px;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="font-weight: 700; color: #334155; font-size: 12px;">📅 Pilih Tanggal Laporan Operasional:</label>
+                    <input type="date" id="filterTanggalDashboard" class="form-control" onchange="loadDashboardData()">
+                </div>
+            </div>
+
+            <!-- PANEL GRAFIK TREN -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📈 Grafik Tren Kinerja PKS</h3>
+                </div>
+                <div class="grafik-controls">
+                    <select id="selectModeTampilan" class="form-control" onchange="updateGrafikMetrik()">
+                        <option value="harian">Mode: Harian</option>
+                        <option value="bulanan">Mode: Per Bulan</option>
+                    </select>
+                    <select id="selectMetrikGrafik" class="form-control" onchange="updateGrafikMetrik()">
+                        <option value="oer_cpo">OER CPO (%)</option>
+                        <option value="oer_hfc">OER HFC (%)</option>
+                        <option value="ker">KER (%)</option>
+                        <option value="tbs_olah">TBS Olah (Ton)</option>
+                        <option value="restan">Restan (Ton)</option>
+                        <option value="throughput">Throughput (Ton/Jam)</option>
+                    </select>
+                </div>
+                <div id="filterTanggalBox" style="display: flex; gap: 8px; margin-top: 10px;">
+                    <input type="date" id="grafikMulai" class="form-control" onchange="updateGrafikMetrik()">
+                    <input type="date" id="grafikSelesai" class="form-control" onchange="updateGrafikMetrik()">
+                </div>
+                <div style="position: relative; height: 240px; width: 100%; margin-top: 14px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- PANEL 1: STOK TANGKI CPO, HFC & KSB -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>🛢️ Ringkasan Stok Tangki CPO & Kernel</h3>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-item">
+                        <h4>Stok Tangki CPO & HFC</h4>
+                        <div class="summary-row"><span>Tangki CPO 1:</span> <b id="valStokCpoT1">-</b></div>
+                        <div class="summary-row"><span>Tangki CPO 2:</span> <b id="valStokCpoT2">-</b></div>
+                        <div class="summary-row"><span>Tangki CPO 3:</span> <b id="valStokCpoT3">-</b></div>
+                        <div class="summary-row"><span>Stok HFC:</span> <b id="valStokHfc">-</b></div>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Stok Kernel & Total</h4>
+                        <div class="summary-row"><span>Stok KSB:</span> <b id="valStokKsb">-</b></div>
+                        <div class="summary-row"><span>Total Stok CPO:</span> <b id="valTotalCpo">-</b></div>
+                        <div class="summary-row"><span>Total Stok Kernel:</span> <b id="valTotalKernel">-</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 2: RINGKASAN KUALITAS LAB & LOSSES -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>🧪 Kualitas Lab & Oil Losses</h3>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-item">
+                        <h4>Kadar FFA Tangki CPO</h4>
+                        <div class="summary-row"><span>Tangki 1:</span> <b id="valFfaT1">-</b></div>
+                        <div class="summary-row"><span>Tangki 2:</span> <b id="valFfaT2">-</b></div>
+                        <div class="summary-row"><span>Tangki 3:</span> <b id="valFfaT3">-</b></div>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Rata-rata Oil Losses Utama</h4>
+                        <div class="summary-row"><span>Empty Bunch:</span> <b id="valLossesEb">-</b></div>
+                        <div class="summary-row"><span>Fiber Press:</span> <b id="valLossesFp">-</b></div>
+                        <div class="summary-row"><span>Nut:</span> <b id="valLossesNu">-</b></div>
+                        <div class="summary-row"><span>Sludge Centrifuge:</span> <b id="valLossesSc">-</b></div>
+                        <div class="summary-row"><span>Before Recovery:</span> <b id="valLossesBr">-</b></div>
+                        <div class="summary-row"><span>After Recovery:</span> <b id="valLossesAr">-</b></div>
+                        <div class="summary-row"><span>Final Effluent:</span> <b id="valLossesFe">-</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABEL LAPORAN KANTOR TERBARU -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📋 Rekapitulasi Krani Kantor</h3>
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelDashboardRingkasan">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Petugas</th>
+                                <th>TBS Olah</th>
+                                <th>OER CPO</th>
+                                <th>OER HFC</th>
+                                <th>KER</th>
+                                <th>Restan</th>
+                                <th>Throughput</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat data rekap...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MONITORING PER DEPARTEMEN -->
+        <div id="tab-monitoring" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h3>📋 Monitoring Log Per Departemen</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+                    <select id="selectStasiunMonitoring" class="form-control" onchange="loadMonitoringData()">
+                        <option value="Kantor">Kantor (Krani Produksi)</option>
+                        <option value="Loading Ramp">Loading Ramp</option>
+                        <option value="Sterilizer">Sterilizer</option>
+                        <option value="Tippler">Tippler</option>
+                        <option value="Press & Digester">Press & Digester</option>
+                        <option value="Nut & Kernel">Nut & Kernel</option>
+                        <option value="Klarifikasi">Klarifikasi</option>
+                        <option value="Analyst">Lab - Analyst</option>
+                        <option value="Sample Boy Cairan">Lab - Sample Boy Cairan</option>
+                    </select>
+                    <input type="date" id="filterTanggalMonitoring" class="form-control" onchange="loadMonitoringData()">
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelMonitoring">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tanggal</th>
+                                <th>Petugas</th>
+                                <th>Stasiun</th>
+                                <th>Detail Data Laporan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Pilih stasiun untuk memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: GUDANG (STOCK, PERMINTAAN, VERIFIKASI) -->
+        <div id="tab-gudang" class="tab-content">
+            <div class="card">
+                <!-- Sub-nav pill style -->
+                <div class="gudang-subnav">
+                    <button class="subnav-btn active" onclick="switchGudangSub('stock', this)">Stock Gudang</button>
+                    <button class="subnav-btn" onclick="switchGudangSub('permintaan', this)">Ambil Barang</button>
+                    <button class="subnav-btn" onclick="switchGudangSub('verifikasi', this)">Verifikasi Reservasi</button>
+                </div>
+
+                <!-- SUB-MENU 1: STOCK GUDANG & WARNING -->
+                <div id="gudang-stock" class="gudang-section active">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="margin:0;">📦 Daftar Stock Gudang</h3>
+                        <div id="adminGudangActions">
+                            <button class="btn-primary" onclick="bukaModalTambahBarang()" style="padding: 8px 12px; font-size: 12px;">+ Tambah Barang</button>
+                        </div>
+                    </div>
+                    <input type="text" id="cariBarang" class="form-control" placeholder="🔍 Cari nomor, nama, satuan, jenis..." onkeyup="filterTabelGudang()" style="margin-bottom: 12px;">
+                    <div class="table-responsive">
+                        <table id="tabelGudang">
+                            <thead>
+                                <tr>
+                                    <th>No. Material</th>
+                                    <th>Nama Material</th>
+                                    <th>Rak</th>
+                                    <th>Lokasi</th>
+                                    <th style="min-width: 180px;">Stock</th>
+                                    <th>Satuan</th>
+                                    <th>Jenis</th>
+                                    <th id="thAksiGudang">Aksi Manajemen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Memuat data gudang...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginasi 50 Data Per Halaman -->
+                    <div class="pagination" id="paginationGudang"></div>
+                </div>
+
+                <!-- SUB-MENU 2: FORM PERMINTAAN BARANG -->
+                <div id="gudang-permintaan" class="gudang-section">
+                    <div id="form-card">
+                        <h3 style="margin-bottom: 14px;">🛒 Ambil Barang (Bisa Lebih dari 1 Material)</h3>
+                        <form id="formAmbil">
+                            <div id="material-list-container">
+                                <div class="material-row" style="background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);">
+                                    <div class="form-group" style="margin-bottom: 8px;">
+                                        <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Nomor Material</label>
+                                        <input type="text" class="input-nomor form-control" required placeholder="Contoh: MTR-001">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 8px;">
+                                        <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Jumlah</label>
+                                        <input type="number" class="input-jumlah form-control" required min="1" placeholder="Jumlah">
+                                    </div>
+                                    <button type="button" onclick="hapusBaris(this)" style="background: var(--danger); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">Hapus Baris</button>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="tambahBarisMaterial()" style="background: #334155; color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; margin-bottom: 14px; font-weight: 700;">+ Tambah Material Lain</button>
+
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Kegunaan Untuk Apa?</label>
+                                <textarea id="kegunaan" rows="2" class="form-control" required placeholder="Jelaskan keperluan penggunaan..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Sudah Reservasi Sebelumnya?</label>
+                                <select id="status_reservasi" class="form-control" required onchange="cekReservasi(this.value)">
+                                    <option value="Belum">Belum</option>
+                                    <option value="Sudah">Sudah</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="group-reservasi" style="display: none; margin-bottom: 12px;">
+                                <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Nomor Reservasi</label>
+                                <input type="text" id="nomor_reservasi" class="form-control" placeholder="Masukkan nomor reservasi">
+                            </div>
+                            <button type="submit" class="btn-primary" style="width:100%; padding:12px; font-size:14px; margin-top: 6px;">Kirim Semua Permintaan Barang</button>
+                        </form>
+                    </div>
+
+                    <div id="success-container" style="display: none; text-align: center; padding: 25px 15px;">
+                        <div style="font-size: 45px; color: var(--success); margin-bottom: 8px;">✅</div>
+                        <h3 style="margin-bottom: 6px; font-size: 18px;">Permintaan Berhasil Terkirim!</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Data permintaan material Anda telah masuk ke sistem gudang.</p>
+                        <div style="background: #f8fafc; border: 1px dashed var(--border); padding: 12px; border-radius: 10px; margin-bottom: 16px;">
+                            <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px; font-weight: 600;">NOMOR REQUEST ANDA:</span>
+                            <strong id="displayRequestId" style="font-size: 18px; color: var(--primary); letter-spacing: 1px;">-</strong>
+                        </div>
+                        <button class="btn-primary" onclick="mintaLagi()">Ya, Minta Barang Lagi</button>
+                    </div>
+                </div>
+
+                <!-- SUB-MENU 3: VERIFIKASI RESERVASI PER DEPARTEMEN -->
+                <div id="gudang-verifikasi" class="gudang-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin:0;">📝 Verifikasi (<span id="lblDeptApproval">-</span>)</h3>
+                        <button class="btn-primary" onclick="loadLogPermintaan()" style="padding: 8px 12px; font-size: 11px;">🔄 Refresh</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="tabelPersetujuan">
+                            <thead>
+                                <tr>
+                                    <th>ID Request</th>
+                                    <th>Tanggal</th>
+                                    <th>Pemohon</th>
+                                    <th>Material</th>
+                                    <th>Jumlah</th>
+                                    <th>Kegunaan</th>
+                                    <th>Reservasi SAP</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Memuat daftar permintaan...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVBAR MOBILE FIXED BOTTOM -->
+    <div class="navbar">
+        <div class="nav-item active" onclick="switchTab('dashboard', this)">Dashboard</div>
+        <div class="nav-item" onclick="switchTab('monitoring', this)">Monitoring</div>
+        <div class="nav-item" onclick="switchTab('gudang', this)">Gudang</div>
+    </div>
+
+    <script>
+        const urlAPI = "https://script.google.com/macros/s/AKfycbzDo3Fhl54G_HfiiOSgWe1PswfpyNG5mjEMiFeWARTXPILWDTcJGuFSejwA72EB3QLj/exec";
+        let cacheDataGudang = [];
+        let globalKantorData = [];
+        let myChart = null;
+        let currentPageGudang = 1;
+        const itemsPerPage = 50;
+
+        const currentUserRole = String(localStorage.getItem('login_role') || "staff").toLowerCase();
+        const isAdminGudang = true; 
+        const currentUserDept = localStorage.getItem('login_dept') || localStorage.getItem('karyawan_dept') || 'Semua';
+        const currentUserName = localStorage.getItem('login_email') || localStorage.getItem('karyawan_nama') || 'Staff';
+
+        window.onload = function() {
+            if (!currentUserName || currentUserName === 'Staff') {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            document.getElementById('dashSubtitle').textContent = `${currentUserName} (${currentUserRole.toUpperCase() || 'STAFF'} - ${currentUserDept})`;
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filterTanggalDashboard').value = today;
+            document.getElementById('filterTanggalMonitoring').value = today;
+
+            const todayDate = new Date();
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(todayDate.getDate() - 30);
+
+            document.getElementById('grafikMulai').value = thirtyDaysAgo.toISOString().split('T')[0];
+            document.getElementById('grafikSelesai').value = todayDate.toISOString().split('T')[0];
+
+            loadDashboardData();
+            loadDataGudangSilent();
+        };
+
+        function switchTab(tabName, element) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            if (tabName === 'dashboard') {
+                document.getElementById('tab-dashboard').classList.add('active');
+                loadDashboardData();
+            } else if (tabName === 'monitoring') {
+                document.getElementById('tab-monitoring').classList.add('active');
+                loadMonitoringData();
+            } else if (tabName === 'gudang') {
+                document.getElementById('tab-gudang').classList.add('active');
+                loadDataGudang();
+            }
+            element.classList.add('active');
+        }
+
+        function switchGudangSub(subName, btnElement) {
+            document.querySelectorAll('.gudang-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.subnav-btn').forEach(el => el.classList.remove('active'));
+
+            if (subName === 'stock') {
+                document.getElementById('gudang-stock').classList.add('active');
+                loadDataGudang();
+            } else if (subName === 'permintaan') {
+                document.getElementById('gudang-permintaan').classList.add('active');
+            } else if (subName === 'verifikasi') {
+                document.getElementById('gudang-verifikasi').classList.add('active');
+                loadLogPermintaan();
+            }
+            btnElement.classList.add('active');
+        }
+
+        function cekReservasi(val) {
+            const groupRes = document.getElementById('group-reservasi');
+            const inputRes = document.getElementById('nomor_reservasi');
+            if (val === 'Sudah') {
+                groupRes.style.display = 'block';
+                inputRes.required = true;
+            } else {
+                groupRes.style.display = 'none';
+                inputRes.required = false;
+                inputRes.value = '';
+            }
+        }
+
+        function tambahBarisMaterial() {
+            const container = document.getElementById('material-list-container');
+            const newRow = document.createElement('div');
+            newRow.className = 'material-row';
+            newRow.style.cssText = "background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border);";
+            newRow.innerHTML = `
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Nomor Material</label>
+                    <input type="text" class="input-nomor form-control" required placeholder="Contoh: MTR-001">
+                </div>
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label style="font-size: 12px; font-weight: 700; margin-bottom: 4px; display: block; color: #334155;">Jumlah</label>
+                    <input type="number" class="input-jumlah form-control" required min="1" placeholder="Jumlah">
+                </div>
+                <button type="button" onclick="hapusBaris(this)" style="background: var(--danger); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">Hapus Baris</button>
+            `;
+            container.appendChild(newRow);
+            aturTombolHapus();
+        }
+
+        function hapusBaris(btn) {
+            btn.parentElement.remove();
+            aturTombolHapus();
+        }
+
+        function aturTombolHapus() {
+            const rows = document.getElementsByClassName('material-row');
+            for (let i = 0; i < rows.length; i++) {
+                const btnHapus = rows[i].querySelector('button');
+                btnHapus.style.display = rows.length > 1 ? 'inline-block' : 'none';
+            }
+        }
+
+        document.getElementById('formAmbil').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const rows = document.getElementsByClassName('material-row');
+            let listItems = [];
+
+            for (let i = 0; i < rows.length; i++) {
+                const noMat = rows[i].querySelector('.input-nomor').value.trim();
+                const jml = rows[i].querySelector('.input-jumlah').value;
+                const foundMaterial = cacheDataGudang.find(item => String(item.nomor_material).trim() === noMat);
+                
+                if (!foundMaterial) {
+                    alert(`Nomor material "${noMat}" pada baris ke-${i+1} tidak terdaftar di sistem gudang!`);
+                    return;
+                }
+                listItems.push({ nomor_material: foundMaterial.nomor_material, nama_material: foundMaterial.nama_material, jumlah: jml });
+            }
+
+            const dataKirim = {
+                action: "tambahPermintaanMulti",
+                nama_pengguna: currentUserName,
+                departemen_pengguna: currentUserDept,
+                items: listItems,
+                kegunaan: document.getElementById('kegunaan').value,
+                status_reservasi: document.getElementById('status_reservasi').value,
+                nomor_reservasi: document.getElementById('nomor_reservasi').value
+            };
+
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(dataKirim) })
+            .then(res => res.json())
+            .then(response => {
+                if(response.status === "success") {
+                    document.getElementById('displayRequestId').textContent = response.request_id || "REQ-XXXXXX";
+                    document.getElementById('form-card').style.display = 'none';
+                    document.getElementById('success-container').style.display = 'block';
+                } else {
+                    alert("Gagal: " + response.message);
+                }
+            })
+            .catch(err => alert('Gagal mengirim permintaan.'));
+        });
+
+        function mintaLagi() {
+            document.getElementById('formAmbil').reset();
+            cekReservasi('Belum');
+            document.getElementById('success-container').style.display = 'none';
+            document.getElementById('form-card').style.display = 'block';
+        }
+
+        function loadMonitoringData() {
+            const stasiun = document.getElementById('selectStasiunMonitoring').value;
+            const tanggal = document.getElementById('filterTanggalMonitoring').value;
+            const tbody = document.querySelector('#tabelMonitoring tbody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">⏳ Memuat data monitoring...</td></tr>';
+
+            fetch(urlAPI + `?action=getHistoryKaryawan&nama=&stasiun=${encodeURIComponent(stasiun)}`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                const filtered = tanggal ? (data || []).filter(item => item.tanggal === tanggal) : (data || []);
+
+                if (!filtered || filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Tidak ada data log untuk stasiun dan tanggal tersebut.</td></tr>';
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><b>${item.id || '-'}</b></td>
+                        <td style="white-space: nowrap;">📅 ${item.tanggal}</td>
+                        <td><b>${item.penginput}</b></td>
+                        <td><span style="background: #e0f2fe; color: var(--primary); padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">${item.stasiun}</span></td>
+                        <td><div style="max-height: 80px; overflow-y: auto; font-size: 11px; white-space: pre-wrap; color: #334155;">${item.detail}</div></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Gagal memuat data monitoring dari server.</td></tr>';
+            });
+        }
+
+        function loadLogPermintaan() {
+            const tbody = document.querySelector('#tabelPersetujuan tbody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">⏳ Memuat permintaan barang...</td></tr>';
+
+            fetch(urlAPI + "?action=getLog")
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                const filtered = (data || []).filter(item => {
+                    if (currentUserDept === 'Semua') return true;
+                    return String(item.departemen_pengguna).toLowerCase().includes(currentUserDept.toLowerCase());
+                });
+
+                if (!filtered || filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Tidak ada permintaan barang untuk departemen Anda.</td></tr>';
+                    return;
+                }
+
+                filtered.forEach(item => {
+                    let isApproved = item.approval === 'Iya';
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><b>${item.id_permintaan}</b></td>
+                        <td style="white-space: nowrap;">📅 ${item.tanggal}</td>
+                        <td><b>${item.nama_pengguna}</b><br><small style="color:var(--text-muted);">${item.departemen_pengguna}</small></td>
+                        <td>${item.nomor_material} - <b>${item.nama_material}</b></td>
+                        <td><b>${item.jumlah}</b></td>
+                        <td>${item.kegunaan}</td>
+                        <td>${item.nomor_reservasi && item.nomor_reservasi !== '-' ? '<b>' + item.nomor_reservasi + '</b>' : '<span style="color:var(--danger);">Belum Ada</span>'}</td>
+                        <td><span style="padding: 4px 8px; border-radius: 6px; font-weight:700; background:${isApproved ? '#d1fae5; color:#065f46;' : '#fef3c7; color:#92400e;'}">${isApproved ? 'Disetujui' : 'Pending'}</span></td>
+                        <td>
+                            ${!isApproved ? `<button class="btn-success" onclick="approvePermintaan('${item.id_permintaan}',${item.jumlah})">Setujui</button>` : '<span style="color:var(--success); font-weight:700;">Selesai</span>'}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--danger);">Gagal memuat daftar persetujuan.</td></tr>';
+            });
+        }
+
+        function approvePermintaan(idPermintaan, jumlahDiminta) {
+            let noResv = prompt("Verifikasi Nomor Reservasi SAP:", "");
+            if (noResv === null) return;
+            let jmlValidasi = prompt("Konfirmasi jumlah yang disetujui:", jumlahDiminta);
+            if (!jmlValidasi || isNaN(jmlValidasi)) return;
+
+            const payload = { action: "updateApproval", id_permintaan: idPermintaan, jumlah_baru: Number(jmlValidasi) };
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) })
+            .then(res => res.json())
+            .then(res => { alert(res.message); loadLogPermintaan(); })
+            .catch(err => alert("Gagal memproses persetujuan."));
+        }
+
+        function loadDashboardData() {
+            const tgl = document.getElementById('filterTanggalDashboard').value;
+            fetch(urlAPI + `?action=getRekapHarian&tanggal=${tgl}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('statTbsOlah').textContent = (data.tbs_olah_total || 0).toLocaleString() + " Ton";
+                document.getElementById('statRestan').textContent = (data.restan_terakhir || 0).toLocaleString() + " Ton";
+                document.getElementById('statOerCpo').textContent = (data.oer_cpo_rata_rata || 0) + " %";
+                document.getElementById('statOerHfc').textContent = (data.oer_hfc_rata_rata || 0) + " %";
+                document.getElementById('statKer').textContent = (data.ker_rata_rata || 0) + " %";
+                document.getElementById('statThroughput').textContent = (data.throughput_rata_rata || 0) + " Ton/Jam";
+            })
+            .catch(err => console.error(err));
+
+            fetch(urlAPI + `?action=getHistoryKaryawan&nama=&stasiun=Kantor`)
+            .then(res => res.json())
+            .then(kantorData => {
+                globalKantorData = kantorData || [];
+                renderGrafikTren();
+
+                const tbody = document.querySelector('#tabelDashboardRingkasan tbody');
+                tbody.innerHTML = '';
+                const filtered = tgl ? globalKantorData.filter(item => item.tanggal === tgl) : globalKantorData;
+
+                if (!filtered || filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Tidak ada data rekap.</td></tr>';
+                    return;
+                }
+
+                let latestKantor = filtered[filtered.length - 1];
+                let detailStr = latestKantor.detail;
+
+                let matchT1 = detailStr.match(/T1:\s*([\d.]+)/i);
+                let matchT2 = detailStr.match(/T2:\s*([\d.]+)/i);
+                let matchT3 = detailStr.match(/T3:\s*([\d.]+)/i);
+                let matchHfc = detailStr.match(/HFC:\s*([\d.]+)/i);
+                let matchKsb = detailStr.match(/KSB:\s*([\d.]+)/i);
+                let matchCpo = detailStr.match(/CPO:\s*([\d.]+)/i);
+                let matchKernel = detailStr.match(/Kernel:\s*([\d.]+)/i);
+
+                document.getElementById('valStokCpoT1').textContent = matchT1 ? matchT1[1] + " Ton" : '-';
+                document.getElementById('valStokCpoT2').textContent = matchT2 ? matchT2[1] + " Ton" : '-';
+                document.getElementById('valStokCpoT3').textContent = matchT3 ? matchT3[1] + " Ton" : '-';
+                document.getElementById('valStokHfc').textContent = matchHfc ? matchHfc[1] + " Ton" : '-';
+                document.getElementById('valStokKsb').textContent = matchKsb ? matchKsb[1] + " Ton" : '-';
+                document.getElementById('valTotalCpo').textContent = matchCpo ? matchCpo[1] + " Ton" : '-';
+                document.getElementById('valTotalKernel').textContent = matchKernel ? matchKernel[1] + " Ton" : '-';
+
+                filtered.forEach(item => {
+                    let mOlah = item.detail.match(/TBS Olah:\s*([\d.]+)/i);
+                    let mCpo = item.detail.match(/OER CPO:\s*([\d.]+)/i);
+                    let mHfc = item.detail.match(/OER HFC:\s*([\d.]+)/i);
+                    let mKer = item.detail.match(/KER:\s*([\d.]+)/i);
+                    let mRestan = item.detail.match(/Restan:\s*([\d.]+)/i);
+                    let mThru = item.detail.match(/Throughput:\s*([\d.]+)/i);
+
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="white-space: nowrap;">📅 ${item.tanggal}</td>
+                        <td><b>${item.penginput}</b></td>
+                        <td>${mOlah ? mOlah[1] : '-'} Ton</td>
+                        <td><span style="color: var(--success); font-weight: 700;">${mCpo ? mCpo[1] : '-'}%</span></td>
+                        <td><span style="color: #0284c7; font-weight: 700;">${mHfc ? mHfc[1] : '-'}%</span></td>
+                        <td>${mKer ? mKer[1] : '-'}%</td>
+                        <td>${mRestan ? mRestan[1] : '-'} Ton</td>
+                        <td><b style="color: var(--primary);">${mThru ? mThru[1] + " Ton/Jam" : "-"}</b></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => console.error(err));
+        }
+
+        function renderGrafikTren() { updateGrafikMetrik(); }
+
+        function updateGrafikMetrik() {
+            if (!globalKantorData || globalKantorData.length === 0) return;
+            const modeTampilan = document.getElementById('selectModeTampilan').value;
+            const metrikPilihan = document.getElementById('selectMetrikGrafik').value;
+            const filterTanggalBox = document.getElementById('filterTanggalBox');
+            filterTanggalBox.style.display = modeTampilan === 'bulanan' ? 'none' : 'flex';
+
+            const isAverage = ['oer_cpo', 'oer_hfc', 'ker', 'throughput'].includes(metrikPilihan);
+            let labels = [], dataValues = [];
+
+            if (modeTampilan === 'bulanan') {
+                let monthlyMap = {};
+                globalKantorData.forEach(item => {
+                    if (!item.tanggal || item.tanggal === "-") return;
+                    let bulanKey = item.tanggal.substring(0, 7);
+                    let val = 0;
+                    if (metrikPilihan === 'oer_cpo') { let match = item.detail.match(/OER CPO:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'oer_hfc') { let match = item.detail.match(/OER HFC:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'ker') { let match = item.detail.match(/KER:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'tbs_olah') { let match = item.detail.match(/TBS Olah:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'restan') { let match = item.detail.match(/Restan:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'throughput') { let match = item.detail.match(/Throughput:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+
+                    if (!monthlyMap[bulanKey]) monthlyMap[bulanKey] = { total: 0, count: 0 };
+                    monthlyMap[bulanKey].total += val;
+                    monthlyMap[bulanKey].count += 1;
+                });
+                let sortedMonths = Object.keys(monthlyMap).sort();
+                labels = sortedMonths.map(m => {
+                    let [y, mo] = m.split('-');
+                    const namaBulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+                    return `${namaBulan[parseInt(mo, 10) - 1]} ${y}`;
+                });
+                dataValues = sortedMonths.map(m => isAverage ? Number((monthlyMap[m].total / monthlyMap[m].count).toFixed(2)) : Number(monthlyMap[m].total.toFixed(2)));
+            } else {
+                const tglMulai = document.getElementById('grafikMulai').value;
+                const tglSelesai = document.getElementById('grafikSelesai').value;
+                let filteredData = globalKantorData.filter(item => {
+                    if (!item.tanggal || item.tanggal === "-") return false;
+                    if (tglMulai && item.tanggal < tglMulai) return false;
+                    if (tglSelesai && item.tanggal > tglSelesai) return false;
+                    return true;
+                });
+                filteredData.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+                labels = filteredData.map(i => i.tanggal);
+                filteredData.forEach(i => {
+                    let val = 0;
+                    if (metrikPilihan === 'oer_cpo') { let match = i.detail.match(/OER CPO:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'oer_hfc') { let match = i.detail.match(/OER HFC:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'ker') { let match = i.detail.match(/KER:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'tbs_olah') { let match = i.detail.match(/TBS Olah:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'restan') { let match = i.detail.match(/Restan:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    else if (metrikPilihan === 'throughput') { let match = i.detail.match(/Throughput:\s*([\d.]+)/i); val = match ? parseFloat(match[1]) : 0; }
+                    dataValues.push(val);
+                });
+            }
+
+            let datasetConfig = { label: document.getElementById('selectMetrikGrafik').selectedOptions[0].text, data: dataValues, borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.08)', borderWidth: 2.5, tension: 0.35, fill: true, pointRadius: 3 };
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [datasetConfig] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } } });
+        }
+
+        function loadDataGudangSilent() {
+            fetch(urlAPI + "?action=getBarang").then(res => res.json()).then(data => { cacheDataGudang = data || []; }).catch(err => console.error(err));
+        }
+
+        function loadDataGudang() {
+            fetch(urlAPI + "?action=getBarang").then(res => res.json()).then(data => { cacheDataGudang = data || []; filterAndRenderGudang(); }).catch(err => console.error(err));
+        }
+
+        function filterAndRenderGudang() {
+            const keyword = document.getElementById('cariBarang').value.toLowerCase();
+            const filtered = cacheDataGudang.filter(item => String(item.nomor_material).toLowerCase().includes(keyword) || String(item.nama_material).toLowerCase().includes(keyword) || String(item.satuan).toLowerCase().includes(keyword) || String(item.jenis_material).toLowerCase().includes(keyword));
+
+            const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+            if (currentPageGudang > totalPages) currentPageGudang = totalPages;
+            const startIdx = (currentPageGudang - 1) * itemsPerPage;
+            const paginatedData = filtered.slice(startIdx, startIdx + itemsPerPage);
+
+            const tbody = document.querySelector('#tabelGudang tbody');
+            tbody.innerHTML = '';
+            if (!paginatedData || paginatedData.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Tidak ada barang.</td></tr>'; 
+                document.getElementById('paginationGudang').innerHTML = '';
+                return; 
+            }
+            
+            paginatedData.forEach(item => {
+                let stokVal = Number(item.stock) || 0;
+                let minStockVal = Number(item.min_stock) || 0;
+                
+                let badgeHtml = '';
+                if (item.warning_aktif === 'Iya' && minStockVal > 0) {
+                    if (stokVal <= minStockVal) {
+                        badgeHtml = '<span class="badge-warning">⚠️ MENIPIS (' + minStockVal + ')</span>';
+                    } else {
+                        badgeHtml = '<span class="badge-safe">✅ AMAN (> ' + minStockVal + ')</span>';
+                    }
+                } else {
+                    badgeHtml = '<span class="badge-normal">Normal</span>';
+                }
+                
+                let tr = document.createElement('tr');
+                let htmlContent = `
+                    <td><b>${item.nomor_material}</b></td>
+                    <td>${item.nama_material}</td>
+                    <td>${item.rak}</td>
+                    <td>${item.lokasi}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                            <span style="font-size: 13px; font-weight: 700;">${stokVal}</span>
+                            ${badgeHtml}
+                        </div>
+                    </td>
+                    <td>${item.satuan}</td>
+                    <td><span style="font-weight:700; color:${item.jenis_material === 'DSTA' ? '#0284c7' : '#10b981'};">${item.jenis_material}</span></td>
+                    <td>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn-action" style="background:var(--primary);" onclick="tambahStokItem('${item.nomor_material}', '${item.nama_material}')">+ Stok</button>
+                            <button class="btn-action" style="background:#475569;" onclick="aturWarningItem('${item.nomor_material}', '${item.nama_material}', '${item.warning_aktif || 'Tidak'}', ${minStockVal})">⚠️ Warning</button>
+                        </div>
+                    </td>
+                `;
+                
+                tr.innerHTML = htmlContent;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('paginationGudang').innerHTML = `
+                <span>Hal ${currentPageGudang} dari ${totalPages} (${filtered.length} total data)</span>
+                <div style="display: flex; gap: 6px;">
+                    <button onclick="changePageGudang(-1)" ${currentPageGudang === 1 ? 'disabled' : ''}>← Prev</button>
+                    <button onclick="changePageGudang(1)" ${currentPageGudang === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+        }
+
+        function filterTabelGudang() {
+            currentPageGudang = 1;
+            filterAndRenderGudang();
+        }
+
+        function changePageGudang(dir) {
+            currentPageGudang += dir;
+            filterAndRenderGudang();
+        }
+
+        function aturWarningItem(noMat, namaMat, currentStatus, currentMin) {
+            let status = prompt(`Pengaturan Warning Stock untuk "${namaMat}" (${noMat}):\nKetik 'Iya' untuk mengaktifkan peringatan, atau 'Tidak' untuk mematikan:`, currentStatus);
+            if (!status) return;
+            
+            let statusClean = status.trim();
+            if (statusClean.toLowerCase() !== 'iya' && statusClean.toLowerCase() !== 'tidak') {
+                alert("Harap ketik 'Iya' atau 'Tidak' dengan benar.");
+                return;
+            }
+
+            let minVal = prompt(`Masukkan BATAS MINIMAL stok untuk "${namaMat}" (Jika stok di bawah atau sama dengan angka ini, sistem akan memunculkan tanda peringatan merah):`, currentMin > 0 ? currentMin : 5);
+            if (minVal === null) return;
+
+            let minStockNum = Number(minVal);
+            if (isNaN(minStockNum) || minStockNum < 0) {
+                alert("Masukkan angka batas minimal yang valid!");
+                return;
+            }
+
+            const payload = { 
+                action: "updateWarningConfig", 
+                nomor_material: noMat, 
+                warning_aktif: statusClean.toLowerCase() === 'iya' ? 'Iya' : 'Tidak', 
+                min_stock: minStockNum 
+            };
+
+            fetch(urlAPI, { 
+                method: 'POST', 
+                body: JSON.stringify(payload) 
+            })
+            .then(res => res.json())
+            .then(res => { 
+                alert(res.message || "Pengaturan warning berhasil diperbarui!"); 
+                loadDataGudang(); 
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Gagal mengatur warning ke server.");
+            });
+        }
+
+        function bukaModalTambahBarang() {
+            let noMat = prompt("Masukkan Nomor Material Baru:"); if (!noMat) return;
+            let namaMat = prompt("Masukkan Nama Material:");
+            let rak = prompt("Nomor Rak:") || "-";
+            let lokasi = prompt("Lokasi Gudang:") || "-";
+            let stok = prompt("Jumlah Stok Awal:") || "0";
+            let satuan = prompt("Satuan (Pcs/Kg/Liter/Unit):") || "Pcs";
+            let jenis = prompt("Jenis (DSTA / STORE):") || "STORE";
+
+            const payload = { action: "updateBarang", nomor_material: noMat, nama_material: namaMat, rak: rak, lokasi: lokasi, stock: Number(stok), satuan: satuan, jenis_material: jenis };
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) }).then(res => res.json()).then(res => { alert(res.message); loadDataGudang(); }).catch(err => alert("Gagal menambah barang."));
+        }
+
+        function tambahStokItem(noMat, namaMat) {
+            let tambah = prompt(`Tambah stok untuk "${namaMat}" (${noMat}):\nMasukkan jumlah:`); if (!tambah || isNaN(tambah)) return;
+            const payload = { action: "updateBarang", mode: "tambah_stok", nomor_material: noMat, stock: Number(tambah) };
+            fetch(urlAPI, { method: 'POST', body: JSON.stringify(payload) }).then(res => res.json()).then(res => { alert(res.message); loadDataGudang(); }).catch(err => alert("Gagal menambah stok."));
+        }
+
+        function logoutUser() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

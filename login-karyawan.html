@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Login & Input Karyawan - Plant Monitoring PKS</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; }
+        .container { max-width: 750px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        h2 { color: #333; margin-top: 0; text-align: center; font-size: 20px; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: #444; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa; }
+        input:focus, select:focus, textarea:focus { border-color: #007bff; outline: none; background: #fff; }
+        .btn-primary { background-color: #28a745; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; transition: background 0.2s; }
+        .btn-primary:active { background-color: #218838; }
+        .btn-primary:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .section-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 15px; }
+        .line-box { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #007bff; margin-bottom: 15px; }
+        .line-box h4 { margin-top: 0; color: #007bff; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; }
+        .hidden { display: none; }
+        .user-info-bar { background: #e2e3e5; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; flex-wrap: wrap; gap: 10px; }
+        .btn-logout { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .nav-tabs button { padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; background: #e9ecef; color: #495057; }
+        .nav-tabs button.active { background: #007bff; color: white; }
+        
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border: 1px solid #eee; border-radius: 6px; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+        th { background: #f8f9fa; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🧑‍💻 Portal Login & Input Karyawan</h2>
+        <p class="subtitle">Sistem Input Harian Pabrik Kelapa Sawit (PKS)</p>
+
+        <!-- KARTU LOGIN KARYAWAN -->
+        <div id="cardLoginKaryawan" class="section-box">
+            <form id="formLoginKaryawan">
+                <div class="form-group">
+                    <label>Nama Lengkap Karyawan</label>
+                    <input type="text" id="loginNama" required placeholder="Cth: Budi Santoso">
+                </div>
+                <div class="form-group">
+                    <label>Departemen / Bagian Tugas Hari Ini</label>
+                    <select id="loginDept" required onchange="updateStasiunOptions(this.value)">
+                        <option value="">-- Pilih Departemen --</option>
+                        <option value="Kantor">Kantor (Krani Produksi)</option>
+                        <option value="Proses">Proses (Produksi)</option>
+                        <option value="Laboratorium">Laboratorium (Lab)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="groupStasiun" style="display: none;">
+                    <label>Stasiun / Unit Kerja</label>
+                    <select id="loginStasiun">
+                        <option value="">-- Pilih Stasiun --</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="background-color: #007bff;">Masuk ke Dashboard Karyawan</button>
+            </form>
+        </div>
+
+        <!-- AREA DASHBOARD KARYAWAN (SETELAH LOGIN) -->
+        <div id="areaFormInput" class="hidden">
+            <div class="user-info-bar">
+                <div>
+                    <b>Login:</b> <span id="dispNama"></span> | <span id="dispBagian"></span>
+                </div>
+                <button class="btn-logout" onclick="logoutKaryawan()">Ganti / Keluar</button>
+            </div>
+
+            <!-- TAB NAVIGASI -->
+            <div class="nav-tabs">
+                <button id="btnTabInput" class="active" onclick="switchKaryawanTab('input')">✍️ Form Input</button>
+                <button id="btnTabHistory" onclick="switchKaryawanTab('history')">📋 Riwayat Stasiun Saya</button>
+            </div>
+
+            <!-- KONTEN TAB INPUT -->
+            <div id="tabContentInput">
+                <div id="dynamicFormContainer"></div>
+            </div>
+
+            <!-- KONTEN TAB HISTORY -->
+            <div id="tabContentHistory" style="display: none;">
+                <h3>📋 Riwayat Data Stasiun Ini</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 11px; margin-bottom: 3px;">Filter Tanggal</label>
+                        <input type="date" id="filterTanggalHistory" onchange="loadHistoryKaryawan()" style="padding: 6px;">
+                    </div>
+                    <div style="display: flex; align-items: flex-end; padding-top: 18px;">
+                        <button type="button" onclick="resetFilterTanggal()" style="padding: 7px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">Reset Tanggal</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table id="tabelHistoryKaryawan">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Diinput Oleh</th>
+                                <th>Stasiun / Bagian</th>
+                                <th>Detail Data yang Diinput</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4" style="text-align: center;">Memuat riwayat...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlAPI = "https://script.google.com/macros/s/AKfycbzDo3Fhl54G_HfiiOSgWe1PswfpyNG5mjEMiFeWARTXPILWDTcJGuFSejwA72EB3QLj/exec";
+
+        function getJamDropdownHTML(selectName) {
+            return `
+                <select name="${selectName}" required>
+                    <option value="">-- Pilih Rentang Jam --</option>
+                    <option value="00:00 - 01:00">00:00 - 01:00</option>
+                    <option value="01:00 - 02:00">01:00 - 02:00</option>
+                    <option value="02:00 - 03:00">02:00 - 03:00</option>
+                    <option value="03:00 - 04:00">03:00 - 04:00</option>
+                    <option value="04:00 - 05:00">04:00 - 05:00</option>
+                    <option value="05:00 - 06:00">05:00 - 06:00</option>
+                    <option value="06:00 - 07:00">06:00 - 07:00</option>
+                    <option value="07:00 - 08:00">07:00 - 08:00</option>
+                    <option value="08:00 - 09:00">08:00 - 09:00</option>
+                    <option value="09:00 - 10:00">09:00 - 10:00</option>
+                    <option value="10:00 - 11:00">10:00 - 11:00</option>
+                    <option value="11:00 - 12:00">11:00 - 12:00</option>
+                    <option value="12:00 - 13:00">12:00 - 13:00</option>
+                    <option value="13:00 - 14:00">13:00 - 14:00</option>
+                    <option value="14:00 - 15:00">14:00 - 15:00</option>
+                    <option value="15:00 - 16:00">15:00 - 16:00</option>
+                    <option value="16:00 - 17:00">16:00 - 17:00</option>
+                    <option value="17:00 - 18:00">17:00 - 18:00</option>
+                    <option value="18:00 - 19:00">18:00 - 19:00</option>
+                    <option value="19:00 - 20:00">19:00 - 20:00</option>
+                    <option value="20:00 - 21:00">20:00 - 21:00</option>
+                    <option value="21:00 - 22:00">21:00 - 22:00</option>
+                    <option value="22:00 - 23:00">22:00 - 23:00</option>
+                    <option value="23:00 - 00:00">23:00 - 00:00</option>
+                </select>
+            `;
+        }
+
+        window.onload = function() {
+            const savedNama = localStorage.getItem('karyawan_nama');
+            const savedDept = localStorage.getItem('karyawan_dept');
+            const savedStasiun = localStorage.getItem('karyawan_stasiun');
+
+            if (savedNama && savedDept) {
+                document.getElementById('cardLoginKaryawan').style.display = 'none';
+                document.getElementById('areaFormInput').style.display = 'block';
+                document.getElementById('dispNama').textContent = savedNama;
+                document.getElementById('dispBagian').textContent = savedStasiun ? `${savedDept} - ${savedStasiun}` : savedDept;
+                renderFormInput(savedDept, savedStasiun);
+            }
+        };
+
+        function updateStasiunOptions(dept) {
+            const groupStasiun = document.getElementById('groupStasiun');
+            const selectStasiun = document.getElementById('loginStasiun');
+            selectStasiun.innerHTML = '<option value="">-- Pilih Stasiun --</option>';
+
+            if (dept === 'Proses') {
+                groupStasiun.style.display = 'block';
+                selectStasiun.required = true;
+                ['Loading Ramp', 'Sterilizer', 'Tippler', 'Press & Digester', 'Nut & Kernel', 'Klarifikasi'].forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s;
+                    selectStasiun.appendChild(opt);
+                });
+            } else if (dept === 'Laboratorium') {
+                groupStasiun.style.display = 'block';
+                selectStasiun.required = true;
+                ['Analyst', 'Sample Boy Cairan'].forEach(s => {
+                    let opt = document.createElement('option');
+                    opt.value = s; opt.textContent = s;
+                    selectStasiun.appendChild(opt);
+                });
+            } else {
+                groupStasiun.style.display = 'none';
+                selectStasiun.required = false;
+            }
+        }
+
+        document.getElementById('formLoginKaryawan').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nama = document.getElementById('loginNama').value.trim();
+            const dept = document.getElementById('loginDept').value;
+            let stasiun = document.getElementById('loginStasiun').value;
+
+            if (dept === 'Kantor') stasiun = 'Kantor';
+
+            if (nama && dept) {
+                localStorage.setItem('karyawan_nama', nama);
+                localStorage.setItem('karyawan_dept', dept);
+                localStorage.setItem('karyawan_stasiun', stasiun);
+
+                document.getElementById('cardLoginKaryawan').style.display = 'none';
+                document.getElementById('areaFormInput').style.display = 'block';
+                document.getElementById('dispNama').textContent = nama;
+                document.getElementById('dispBagian').textContent = stasiun !== 'Kantor' ? `${dept} - ${stasiun}` : dept;
+                renderFormInput(dept, stasiun);
+            }
+        });
+
+        function logoutKaryawan() {
+            localStorage.removeItem('karyawan_nama');
+            localStorage.removeItem('karyawan_dept');
+            localStorage.removeItem('karyawan_stasiun');
+            location.reload();
+        }
+
+        function switchKaryawanTab(tab) {
+            const btnInput = document.getElementById('btnTabInput');
+            const btnHistory = document.getElementById('btnTabHistory');
+            const contentInput = document.getElementById('tabContentInput');
+            const contentHistory = document.getElementById('tabContentHistory');
+
+            if (tab === 'input') {
+                btnInput.classList.add('active');
+                btnHistory.classList.remove('active');
+                contentInput.style.display = 'block';
+                contentHistory.style.display = 'none';
+            } else {
+                btnHistory.classList.add('active');
+                btnInput.classList.remove('active');
+                contentHistory.style.display = 'block';
+                contentInput.style.display = 'none';
+                loadHistoryKaryawan();
+            }
+        }
+
+        function resetFilterTanggal() {
+            document.getElementById('filterTanggalHistory').value = '';
+            loadHistoryKaryawan();
+        }
+
+        function loadHistoryKaryawan() {
+            const namaKaryawan = localStorage.getItem('karyawan_nama');
+            let stasiunAktif = localStorage.getItem('karyawan_stasiun');
+            const deptAktif = localStorage.getItem('karyawan_dept');
+            const tglFilter = document.getElementById('filterTanggalHistory').value;
+
+            if (deptAktif === 'Kantor') stasiunAktif = 'Kantor';
+
+            const tbody = document.querySelector('#tabelHistoryKaryawan tbody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 15px;">⏳ Mengambil riwayat stasiun...</td></tr>';
+
+            fetch(urlAPI + `?action=getHistoryKaryawan&nama=${encodeURIComponent(namaKaryawan)}&stasiun=${encodeURIComponent(stasiunAktif)}`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                
+                let filteredData = data;
+                if (tglFilter) {
+                    filteredData = data.filter(item => item.tanggal === tglFilter);
+                }
+
+                if (!filteredData || filteredData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 15px; color: #888;">Tidak ada riwayat data pada tanggal tersebut.</td></tr>';
+                    return;
+                }
+
+                filteredData.forEach(item => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="white-space: nowrap;">📅 ${item.tanggal}</td>
+                        <td style="white-space: nowrap;">👤 <b>${item.penginput}</b></td>
+                        <td style="white-space: nowrap;"><span style="background: #e9ecef; padding: 3px 8px; border-radius: 4px;">${item.stasiun}</span></td>
+                        <td style="font-family: monospace; font-size: 11px; line-height: 1.4; color: #222;">${item.detail}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 15px;">Gagal memuat riwayat.</td></tr>';
+                console.error(err);
+            });
+        }
+
+        function renderFormInput(dept, stasiun) {
+            const container = document.getElementById('dynamicFormContainer');
+            container.innerHTML = '';
+
+            if (dept === 'Kantor') {
+                container.innerHTML = `
+                    <h3>📊 Input Krani Produksi (Kantor)</h3>
+                    <form onsubmit="kirimData(event, 'inputKraniKantor', this)">
+                        <div class="form-group"><label>Stok CPO Tangki 1 (Ton)</label><input type="number" step="any" inputmode="decimal" name="stok_cpo_t1" required></div>
+                        <div class="form-group"><label>Stok CPO Tangki 2 (Ton)</label><input type="number" step="any" inputmode="decimal" name="stok_cpo_t2" required></div>
+                        <div class="form-group"><label>Stok CPO Tangki 3 (Ton)</label><input type="number" step="any" inputmode="decimal" name="stok_cpo_t3" required></div>
+                        <div class="form-group"><label>Total Stok CPO (Ton)</label><input type="number" step="any" inputmode="decimal" name="total_stok_cpo" required></div>
+                        <div class="form-group"><label>Stok HFC (Ton)</label><input type="number" step="any" inputmode="decimal" name="stok_hfc" required></div>
+                        <div class="form-group"><label>Kernel Silo 1 (Ton)</label><input type="number" step="any" inputmode="decimal" name="kernel_silo_1" required></div>
+                        <div class="form-group"><label>Kernel Silo 2 (Ton)</label><input type="number" step="any" inputmode="decimal" name="kernel_silo_2" required></div>
+                        <div class="form-group"><label>Kernel Silo 3 (Ton)</label><input type="number" step="any" inputmode="decimal" name="kernel_silo_3" required></div>
+                        <div class="form-group"><label>Kernel Silo 4 (Ton)</label><input type="number" step="any" inputmode="decimal" name="kernel_silo_4" required></div>
+                        <div class="form-group"><label>Stok KSB (Ton)</label><input type="number" step="any" inputmode="decimal" name="stok_ksb" required></div>
+                        <div class="form-group"><label>Total Stok Kernel (Ton)</label><input type="number" step="any" inputmode="decimal" name="total_stok_kernel" required></div>
+                        <div class="form-group"><label>Total TBS Masuk Kemarin (Ton)</label><input type="number" step="any" inputmode="decimal" name="tbs_masuk_kemarin" required></div>
+                        
+                        <hr style="border: 0; border-top: 2px solid #ccc; margin: 20px 0;">
+                        <div class="form-group"><label>TBS Olah Hari Ini (Ton)</label><input type="number" step="any" inputmode="decimal" name="tbs_olah" required></div>
+                        <div class="form-group"><label>Restan / Sisa TBS (Ton)</label><input type="number" step="any" inputmode="decimal" name="restan" required placeholder="Cth: 45.50"></div>
+                        <div class="form-group"><label>OER CPO (%)</label><input type="number" step="any" inputmode="decimal" name="oer_cpo" required placeholder="Cth: 21.50"></div>
+                        <div class="form-group"><label>OER HFC (%)</label><input type="number" step="any" inputmode="decimal" name="oer_hfc" required placeholder="Cth: 0.50"></div>
+                        <div class="form-group"><label>KER (%)</label><input type="number" step="any" inputmode="decimal" name="ker" required placeholder="Cth: 4.80"></div>
+                        <div class="form-group"><label>Throughput (Ton/Jam)</label><input type="number" step="any" inputmode="decimal" name="throughput" required placeholder="Cth: 35.0"></div>
+
+                        <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Ada kendala..." value="-"></div>
+                        <button type="submit" class="btn-primary">Kirim Data Kantor</button>
+                    </form>
+                `;
+            } else if (dept === 'Proses') {
+                if (stasiun === 'Loading Ramp') {
+                    container.innerHTML = `
+                        <h3>🚛 Input Stasiun Loading Ramp</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesLoadingRamp', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Rentang Jam</label>${getJamDropdownHTML('jam_rentang')}</div>
+                            <div class="form-group"><label>Pengisian Buah (Lori)</label><input type="number" step="any" inputmode="decimal" name="pengisian_buah_lori" required></div>
+                            <div class="form-group"><label>Transfer ke Sterilizer No.</label><input type="text" name="transfer_ke_sterilizer" placeholder="Cth: Sterilizer 1, 2" required></div>
+                            <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Konveyor sempat macet" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Loading Ramp</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Sterilizer') {
+                    container.innerHTML = `
+                        <h3>♨️ Input Stasiun Sterilizer</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesSterilizer', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Nomor Sterilizer</label><select name="nomor_sterilizer"><option value="Sterilizer 1">Sterilizer 1</option><option value="Sterilizer 2">Sterilizer 2</option><option value="Sterilizer 3">Sterilizer 3</option><option value="Sterilizer 4">Sterilizer 4</option></select></div>
+                            <div class="form-group"><label>Nomor Urut</label><input type="number" inputmode="numeric" name="nomor_urut_batch" placeholder="Cth: 1, 2, 3..." required></div>
+                            <div class="form-group"><label>Jam Mulai</label><input type="time" name="jam_mulai" required></div>
+                            <div class="form-group"><label>Jam Berhenti</label><input type="time" name="jam_berhenti" required></div>
+                            <div class="form-group"><label>Jam Keluar</label><input type="time" name="jam_keluar" required></div>
+                            <div class="form-group"><label>Jumlah Lori</label><input type="number" step="any" inputmode="decimal" name="jumlah_lori" required></div>
+                            <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Pintu agak lambat" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Sterilizer</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Tippler') {
+                    container.innerHTML = `
+                        <h3>🚜 Input Stasiun Tippler</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesTippler', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Rentang Jam</label>${getJamDropdownHTML('jam_rentang')}</div>
+                            <div class="form-group"><label>Tuangan Lori Per Jam</label><input type="number" step="any" inputmode="decimal" name="tuangan_lori_per_jam" required></div>
+                            <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Ada perbaikan 15 mnt" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Tippler</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Press & Digester') {
+                    container.innerHTML = `
+                        <h3>⚙️ Input Press & Digester</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesPressDigester', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group">
+                                <label>Tipe / Kategori Input</label>
+                                <select name="tipe_input" id="pressTipeInput" onchange="togglePressInputType(this.value)" required>
+                                    <option value="Per_Jam">Data Per Jam (Suhu, Ampere, Tekanan)</option>
+                                    <option value="Hour_Meter">Hour Meter (HM Awal & Akhir Shift)</option>
+                                </select>
+                            </div>
+
+                            <!-- FORM KATEGORI: PER JAM (DUAL LINE A & B) -->
+                            <div id="pressFormPerJam">
+                                <div class="form-group"><label>Rentang Jam</label>${getJamDropdownHTML('jam_rentang')}</div>
+                                <div class="form-group"><label>Temperatur Dilution Umum (°C)</label><input type="number" step="any" inputmode="decimal" name="temp_dilution" value="0"></div>
+                                <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+                                <div class="line-box">
+                                    <h4>🟢 LINE A (Per Jam)</h4>
+                                    <div class="form-group"><label>Unit Mesin</label><select name="line_a_unit"><option value="Unit 1">Unit 1</option><option value="Unit 2">Unit 2</option><option value="Unit 3">Unit 3</option></select></div>
+                                    <div class="form-group"><label>Temperatur Digester</label><input type="number" step="any" inputmode="decimal" name="line_a_temp_dig" value="0"></div>
+                                    <div class="form-group"><label>Ampere Digester</label><input type="number" step="any" inputmode="decimal" name="line_a_amp_dig" value="0"></div>
+                                    <div class="form-group"><label>Tekanan Hidrolik Press</label><input type="number" step="any" inputmode="decimal" name="line_a_press_hid" value="0"></div>
+                                    <div class="form-group"><label>Ampere Press</label><input type="number" step="any" inputmode="decimal" name="line_a_amp_press" value="0"></div>
+                                </div>
+                                <div class="line-box">
+                                    <h4>🔵 LINE B (Per Jam)</h4>
+                                    <div class="form-group"><label>Unit Mesin</label><select name="line_b_unit"><option value="Unit 1">Unit 1</option><option value="Unit 2">Unit 2</option><option value="Unit 3">Unit 3</option></select></div>
+                                    <div class="form-group"><label>Temperatur Digester</label><input type="number" step="any" inputmode="decimal" name="line_b_temp_dig" value="0"></div>
+                                    <div class="form-group"><label>Ampere Digester</label><input type="number" step="any" inputmode="decimal" name="line_b_amp_dig" value="0"></div>
+                                    <div class="form-group"><label>Tekanan Hidrolik Press</label><input type="number" step="any" inputmode="decimal" name="line_b_press_hid" value="0"></div>
+                                    <div class="form-group"><label>Ampere Press</label><input type="number" step="any" inputmode="decimal" name="line_b_amp_press" value="0"></div>
+                                </div>
+                            </div>
+
+                            <!-- FORM KATEGORI: HOUR METER (HM) -->
+                            <div id="pressFormHM" style="display: none;">
+                                <div class="form-group"><label>Pilih Line</label><select name="line"><option value="Line A">Line A</option><option value="Line B">Line B</option></select></div>
+                                <div class="form-group"><label>Unit Mesin</label><select name="unit_mesin"><option value="Unit 1">Unit 1</option><option value="Unit 2">Unit 2</option><option value="Unit 3">Unit 3</option></select></div>
+                                <div class="form-group"><label>HM Awal (Start Shift)</label><input type="number" step="any" inputmode="decimal" name="hm_awal" value="0"></div>
+                                <div class="form-group"><label>HM Akhir (End Shift)</label><input type="number" step="any" inputmode="decimal" name="hm_akhir" value="0"></div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 15px;"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Ada kendala..." value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Press & Digester</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Nut & Kernel') {
+                    container.innerHTML = `
+                        <h3>🥥 Input Nut & Kernel (CBC & Silo)</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesNutKernel', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Line CBC</label><select name="line_cbc"><option value="Line A">Line A</option><option value="Line B">Line B</option></select></div>
+                            <div class="form-group"><label>HM Awal CBC</label><input type="number" step="any" inputmode="decimal" name="hm_awal_cbc" required></div>
+                            <div class="form-group"><label>HM Akhir CBC</label><input type="number" step="any" inputmode="decimal" name="hm_akhir_cbc" required></div>
+                            <div class="form-group"><label>Jam Start CBC</label><input type="time" name="jam_start"></div>
+                            <div class="form-group"><label>Jam Stop CBC</label><input type="time" name="jam_stop"></div>
+                            <div class="form-group"><label>Temp Kernel Silo 1 (°C)</label><input type="number" step="any" inputmode="decimal" name="temp_kernel_silo_1" value="0"></div>
+                            <div class="form-group"><label>Temp Kernel Silo 2 (°C)</label><input type="number" step="any" inputmode="decimal" name="temp_kernel_silo_2" value="0"></div>
+                            <div class="form-group"><label>Temp Kernel Silo 3 (°C)</label><input type="number" step="any" inputmode="decimal" name="temp_kernel_silo_3" value="0"></div>
+                            <div class="form-group"><label>Temp Kernel Silo 4 (°C)</label><input type="number" step="any" inputmode="decimal" name="temp_kernel_silo_4" value="0"></div>
+                            <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Fan silo 2 perbaikan" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Nut & Kernel</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Klarifikasi') {
+                    container.innerHTML = `
+                        <h3>🧪 Input Stasiun Klarifikasi</h3>
+                        <form onsubmit="kirimData(event, 'inputProsesKlarifikasi', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Tipe Input</label><select name="tipe_input"><option value="Per_Jam">Per Jam (Suhu & Tekanan)</option><option value="Hour_Meter">Hour Meter Pompa / Sentrifugal</option></select></div>
+                            <div class="form-group"><label>Waktu / Jam</label>${getJamDropdownHTML('waktu_atau_jam')}</div>
+                            <div class="form-group"><label>Temp Sandtrap A</label><input type="number" step="any" inputmode="decimal" name="temp_sandtrap_a" value="0"></div>
+                            <div class="form-group"><label>Temp Sandtrap B</label><input type="number" step="any" inputmode="decimal" name="temp_sandtrap_b" value="0"></div>
+                            <div class="form-group"><label>Temp COT</label><input type="number" step="any" inputmode="decimal" name="temp_cot" value="0"></div>
+                            <div class="form-group"><label>Temp CST 1</label><input type="number" step="any" inputmode="decimal" name="temp_cst_1" value="0"></div>
+                            <div class="form-group"><label>Temp CST 2</label><input type="number" step="any" inputmode="decimal" name="temp_cst_2" value="0"></div>
+                            <div class="form-group"><label>Tekanan Vacuum Drier 1</label><input type="number" step="any" inputmode="decimal" name="tekanan_vacuum_drier_1" value="0"></div>
+                            <div class="form-group"><label>Tekanan Vacuum Drier 2</label><input type="number" step="any" inputmode="decimal" name="tekanan_vacuum_drier_2" value="0"></div>
+                            <div class="form-group"><label>Temp Collection Tank</label><input type="number" step="any" inputmode="decimal" name="temp_collection_tank" value="0"></div>
+                            <div class="form-group"><label>Temp Hot Water</label><input type="number" step="any" inputmode="decimal" name="temp_hot_water" value="0"></div>
+                            <div class="form-group"><label>Ampere Sludge Centrifuge</label><input type="text" name="ampere_sludge_centrifuge" placeholder="Cth: No.1: 24, No.2: 25" value="-"></div>
+                            <div class="form-group"><label>HM Pompa Final Effluent</label><input type="text" name="hm_pompa_fe" placeholder="Awal - Akhir" value="-"></div>
+                            <div class="form-group"><label>HM Sludge Centrifuge</label><input type="text" name="hm_sludge_centrifuge" placeholder="Awal - Akhir" value="-"></div>
+                            <div class="form-group"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Purifier dibersihkan" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Klarifikasi</button>
+                        </form>
+                    `;
+                }
+            } else if (dept === 'Laboratorium') {
+                if (stasiun === 'Analyst') {
+                    container.innerHTML = `
+                        <h3>🔬 Input Lab Analyst</h3>
+                        <form onsubmit="kirimData(event, 'inputLabAnalyst', this)">
+                            <div class="form-group">
+                                <label>Pilih Kategori Input Lab</label>
+                                <select name="kategori" id="labKategori" onchange="toggleLabKategori(this.value)" required>
+                                    <option value="Kualitas_Tangki">1. Kualitas Tangki CPO</option>
+                                    <option value="Losses">2. Oil Losses Pabrik</option>
+                                    <option value="Rasio_FE">3. Rasio Final Effluent (FE)</option>
+                                </select>
+                            </div>
+
+                            <!-- KATEGORI A: KUALITAS TANGKI CPO -->
+                            <div id="formKualitasTangki">
+                                <div class="form-group">
+                                    <label>Pilih Tangki CPO</label>
+                                    <select name="target_lokasi_tangki">
+                                        <option value="Tangki 1">Tangki 1</option>
+                                        <option value="Tangki 2">Tangki 2</option>
+                                        <option value="Tangki 3">Tangki 3</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Nilai FFA (%)</label><input type="number" step="any" inputmode="decimal" name="nilai_ffa" value="0"></div>
+                                <div class="form-group"><label>Nilai Moisture / Air (%)</label><input type="number" step="any" inputmode="decimal" name="nilai_moist" value="0"></div>
+                                <div class="form-group"><label>Nilai Dirt / Kotoran (%)</label><input type="number" step="any" inputmode="decimal" name="nilai_dirt" value="0"></div>
+                            </div>
+
+                            <!-- KATEGORI B: OIL LOSSES PABRIK -->
+                            <div id="formLossesPabrik" style="display: none;">
+                                <div class="form-group">
+                                    <label>Titik Sampling Losses</label>
+                                    <select name="target_lokasi_losses" onchange="toggleLossesSubLokasi(this.value)">
+                                        <option value="Empty Bunch">Empty Bunch (Janjang Kosong)</option>
+                                        <option value="Fiber Press">Fiber Press</option>
+                                        <option value="Nut">Nut</option>
+                                        <option value="Sludge Centrifuge">Sludge Centrifuge</option>
+                                        <option value="Final Effluent">Final Effluent</option>
+                                        <option value="Before Recovery">Before Recovery</option>
+                                        <option value="After Recovery">After Recovery</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="subLokasiGroup" style="display: none;">
+                                    <label id="lblSubLokasi">Pilih Mesin / Line</label>
+                                    <select name="sub_lokasi_mesin" id="selectSubLokasi">
+                                        <!-- Diisi dinamis via JS -->
+                                    </select>
+                                </div>
+
+                                <div class="form-group"><label>Nilai Losses (%)</label><input type="number" step="any" inputmode="decimal" name="nilai_losses" value="0"></div>
+                            </div>
+
+                            <!-- KATEGORI C: RASIO FINAL EFFLUENT (FE) -->
+                            <div id="formRasioFE" style="display: none;">
+                                <div class="form-group"><label>Nilai Rasio / Kadar FE (%)</label><input type="number" step="any" inputmode="decimal" name="nilai_rasio_fe" value="0" required placeholder="Cth: 2.50"></div>
+                            </div>
+
+                            <div class="form-group" id="groupKeteranganLab" style="margin-top: 15px;"><label>Keterangan / Kendala (Opsional)</label><input type="text" name="keterangan" placeholder="Cth: Normal / Sampel ulang" value="-"></div>
+                            <button type="submit" class="btn-primary">Kirim Data Lab Analyst</button>
+                        </form>
+                    `;
+                } else if (stasiun === 'Sample Boy Cairan') {
+                    container.innerHTML = `
+                        <h3>🧪 Input Lab Sample Boy Cairan</h3>
+                        <form onsubmit="kirimData(event, 'inputLabSampleBoy', this)">
+                            <div class="form-group"><label>Shift</label><select name="shift"><option value="Shift 1">Shift 1</option><option value="Shift 2">Shift 2</option></select></div>
+                            <div class="form-group"><label>Rentang Jam Sampling</label>${getJamDropdownHTML('jam_sampling')}</div>
+                            <div class="form-group"><label>FFA UNCO (%)</label><input type="number" step="any" inputmode="decimal" name="ffa_unco" required></div>
+                            <div class="form-group"><label>FFA Produksi (%)</label><input type="number" step="any" inputmode="decimal" name="ffa_produksi" required></div>
+                            <div class="form-group"><label>% Minyak di UNCO</label><input type="number" step="any" inputmode="decimal" name="minyak_unco_persen" required></div>
+                            <div class="form-group"><label>% Minyak di DCO</label><input type="number" step="any" inputmode="decimal" name="minyak_dco_persen" required></div>
+                            <button type="submit" class="btn-primary">Kirim Data Sample Boy</button>
+                        </form>
+                    `;
+                }
+            }
+        }
+
+        function togglePressInputType(val) {
+            const formPerJam = document.getElementById('pressFormPerJam');
+            const formHM = document.getElementById('pressFormHM');
+            if (val === 'Hour_Meter') {
+                formPerJam.style.display = 'none';
+                formHM.style.display = 'block';
+            } else {
+                formPerJam.style.display = 'block';
+                formHM.style.display = 'none';
+            }
+        }
+
+        function toggleLabKategori(val) {
+            const formTangki = document.getElementById('formKualitasTangki');
+            const formLosses = document.getElementById('formLossesPabrik');
+            const formFE = document.getElementById('formRasioFE');
+            const groupKet = document.getElementById('groupKeteranganLab');
+
+            formTangki.style.display = 'none';
+            formLosses.style.display = 'none';
+            formFE.style.display = 'none';
+            groupKet.style.display = 'block';
+
+            if (val === 'Losses') {
+                formLosses.style.display = 'block';
+                toggleLossesSubLokasi(document.querySelector('[name="target_lokasi_losses"]').value);
+            } else if (val === 'Rasio_FE') {
+                formFE.style.display = 'block';
+                groupKet.style.display = 'none';
+            } else {
+                formTangki.style.display = 'block';
+            }
+        }
+
+        function toggleLossesSubLokasi(jenisLosses) {
+            const subGroup = document.getElementById('subLokasiGroup');
+            const lblSub = document.getElementById('lblSubLokasi');
+            const selectSub = document.getElementById('selectSubLokasi');
+            selectSub.innerHTML = '';
+
+            let opsi = [];
+            if (jenisLosses === 'Fiber Press') {
+                opsi = ['Press 1A', 'Press 2A', 'Press 3A', 'Press 1B', 'Press 2B', 'Press 3B'];
+                lblSub.textContent = 'Pilih Unit Press';
+            } else if (jenisLosses === 'Nut') {
+                opsi = ['Line A', 'Line B'];
+                lblSub.textContent = 'Pilih Line Nut';
+            } else if (jenisLosses === 'Sludge Centrifuge') {
+                opsi = ['Centrifuge 1', 'Centrifuge 2', 'Centrifuge 3', 'Centrifuge 4', 'Centrifuge 5', 'Centrifuge 6', 'Centrifuge 7', 'Centrifuge 8'];
+                lblSub.textContent = 'Pilih Nomor Sludge Centrifuge';
+            }
+
+            if (opsi.length > 0) {
+                subGroup.style.display = 'block';
+                selectSub.required = true;
+                opsi.forEach(opt => {
+                    let el = document.createElement('option');
+                    el.value = opt; el.textContent = opt;
+                    selectSub.appendChild(el);
+                });
+            } else {
+                subGroup.style.display = 'none';
+                selectSub.required = false;
+            }
+        }
+
+        function cekValidasiAnomali(actionName, payload) {
+            if (actionName === 'inputLabAnalyst' && payload.kategori === 'Kualitas_Tangki') {
+                if (payload.nilai_ffa > 10) {
+                    return confirm("⚠️ Peringatan: Nilai FFA di atas 10% tergolong sangat tinggi. Apakah Anda yakin data ini sudah benar?");
+                }
+            } else if (actionName === 'inputProsesPressDigester' && payload.tipe_input === 'Per_Jam') {
+                if (payload.line_a_temp_dig > 110 || payload.line_b_temp_dig > 110) {
+                    return confirm("⚠️ Peringatan: Suhu Digester di atas 110°C tergolong tidak biasa. Lanjutkan?");
+                }
+            }
+            return true;
+        }
+
+        let isSubmitting = false;
+
+        function kirimData(e, actionName, formElement) {
+            e.preventDefault();
+
+            if (isSubmitting) return;
+
+            const formData = new FormData(formElement);
+            let payload = { action: actionName };
+
+            formData.forEach((value, key) => {
+                if (value !== "" && !isNaN(value) && key !== "transfer_ke_sterilizer" && key !== "ampere_sludge_centrifuge" && key !== "hm_pompa_fe" && key !== "hm_sludge_centrifuge" && key !== "keterangan") {
+                    payload[key] = Number(value);
+                } else {
+                    payload[key] = value;
+                }
+            });
+
+            if (!cekValidasiAnomali(actionName, payload)) return;
+
+            const submitBtn = formElement.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn ? submitBtn.textContent : "Kirim Data";
+
+            isSubmitting = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "⏳ Menyimpan data...";
+            }
+
+            if (actionName.includes('Krani')) {
+                payload.nama_krani = localStorage.getItem('karyawan_nama');
+            } else if (actionName.includes('Lab')) {
+                payload.nama_analyst = localStorage.getItem('karyawan_nama');
+            } else {
+                payload.nama_petugas = localStorage.getItem('karyawan_nama');
+            }
+
+            fetch(urlAPI, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(response => {
+                alert(response.message);
+                if(response.status === "success") {
+                    formElement.reset();
+                    if(actionName === 'inputLabAnalyst') {
+                        toggleLabKategori('Kualitas_Tangki');
+                    }
+                }
+            })
+            .catch(err => {
+                alert("Terjadi kesalahan koneksi atau server.");
+                console.error(err);
+            })
+            .finally(() => {
+                isSubmitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login Permintaan Barang - PKS</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { max-width: 400px; width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        h2 { color: #333; margin-top: 0; text-align: center; font-size: 22px; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 25px; }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 13px; color: #444; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fafafa; }
+        input:focus, select:focus { border-color: #007bff; outline: none; background: #fff; }
+        .btn-primary { background-color: #007bff; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; transition: background 0.2s; }
+        .btn-primary:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🛒 Portal Permintaan Barang</h2>
+        <p class="subtitle">Silakan masukkan identitas Anda untuk melanjutkan</p>
+
+        <form id="formLoginIndex" onsubmit="prosesMasuk(event)">
+            <div class="form-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="inputNama" required placeholder="Cth: Budi Santoso">
+            </div>
+            
+            <div class="form-group">
+                <label>Departemen / Bagian</label>
+                <select id="inputDept" required>
+                    <option value="">-- Pilih Departemen --</option>
+                    <option value="Proses">Proses / Produksi</option>
+                    <option value="Laboratorium">Laboratorium</option>
+                    <option value="Maintenance">Maintenance / Teknik</option>
+                    <option value="Elektrik">Elektrik</option>
+                    <option value="Kantor">Kantor / Administrasi</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-primary">Masuk & Buat Permintaan</button>
+        </form>
+    </div>
+
+    <script>
+        // Jika sebelumnya sudah pernah login, langsung arahkan ke permintaan-barang.html
+        window.onload = function() {
+            const savedNama = localStorage.getItem('karyawan_nama');
+            if (savedNama) {
+                window.location.href = 'permintaan-barang.html';
+            }
+        };
+
+        function prosesMasuk(e) {
+            e.preventDefault();
+            const nama = document.getElementById('inputNama').value.trim();
+            const dept = document.getElementById('inputDept').value;
+
+            if (nama && dept) {
+                // Simpan ke localStorage dengan kunci yang sejalan dengan halaman permintaan-barang.html
+                localStorage.setItem('karyawan_nama', nama);
+                localStorage.setItem('karyawan_dept', dept);
+
+                // Langsung arahkan ke halaman permintaan barang
+                window.location.href = 'permintaan-barang.html';
+            }
+        }
+    </script>
+</body>
+</html>
